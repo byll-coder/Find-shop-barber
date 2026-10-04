@@ -53,7 +53,7 @@ function _chemin(rel) {
   return base + rel;
 }
 
-/* /* ── Redirection après connexion ─────────────────────────────── */
+/* ── Redirection après connexion ─────────────────────────────── */
 function redigerApresConnexion(user) {
   if (!user || typeof user.role === "undefined") {
     Session.clear();
@@ -61,11 +61,11 @@ function redigerApresConnexion(user) {
   }
   // Prise en compte de "salon" ET "owner" pour les propriétaires
   const estProprio = user.role === "salon" || user.role === "owner";
-  
+
   window.location.href = estProprio
     ? _chemin("/pages/dashboard-salon.html")
     : _chemin("/pages/dashboard-client.html");
-
+}
 /* ── Protection de page ──────────────────────────────────────── */
 function protegerPage(roleRequis = null) {
   if (!Session.estConnecte()) {
@@ -91,10 +91,11 @@ function majNavbar() {
   if (!authEl) return;
 
   if (user) {
-    const dash =
-      user.role === "salon"
-        ? _chemin("/pages/dashboard-salon.html")
-        : _chemin("/pages/dashboard-client.html");
+    const estProprio = user.role === "salon" || user.role === "owner";
+    const dash = estProprio
+      ? _chemin("/pages/dashboard-salon.html")
+      : _chemin("/pages/dashboard-client.html");
+
     const nom = String(user.nom || "Mon espace");
     const initiale = nom[0].toUpperCase();
     const prenom = nom.split(" ")[0].replace(/[<>&"']/g, "");
@@ -127,23 +128,6 @@ function majNavbar() {
   }
 }
 
-/* ── Badge messages non lus ──────────────────────────────────── */
-async function chargerNonLus() {
-  try {
-    // apiFetch renvoie déjà json.data : ça peut être un nombre ou {total}
-    const r = await Messages.nonLus();
-    const total =
-      typeof r === "number"
-        ? r
-        : Number(r?.total ?? r?.count ?? r?.nonLus ?? 0) || 0;
-    const badge = document.getElementById("notif-msg");
-    if (badge) {
-      badge.textContent = total > 9 ? "9+" : total;
-      badge.style.display = total > 0 ? "flex" : "none";
-    }
-  } catch {}
-}
-
 /* ── Déconnexion ─────────────────────────────────────────────── */
 function deconnexion() {
   Session.clear();
@@ -167,4 +151,4 @@ function afficherToast(msg, type = "info") {
   el._t = setTimeout(() => el.classList.remove("show"), 3500);
 }
 
-document.addEventListener("DOMContentLoaded", majNavbar)  
+document.addEventListener("DOMContentLoaded", majNavbar);
