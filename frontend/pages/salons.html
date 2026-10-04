@@ -1,0 +1,771 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Salons — Salon Finder</title>
+    <link rel="icon" type="image/png" href="../logo/logo-salonfinder.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"
+    />
+    <link rel="stylesheet" href="../css/styles.css" />
+    <style>
+      .page-hero {
+        padding: 120px 0 48px;
+        background: linear-gradient(to bottom, var(--bg2) 0%, var(--bg) 100%);
+        border-bottom: 1px solid var(--bd);
+        position: relative;
+        z-index: 1;
+      }
+      .page-hero-title {
+        font-family: var(--font-display);
+        font-size: clamp(2.2rem, 6vw, 4rem);
+        font-style: italic;
+        color: var(--white);
+        margin-bottom: 6px;
+      }
+      .page-hero-title em {
+        color: var(--gold);
+        font-style: normal;
+      }
+      .page-hero-sub {
+        font-size: 0.88rem;
+        color: var(--txt2);
+        font-weight: 300;
+      }
+
+      /* Barre de recherche sticky */
+      .search-bar {
+        position: sticky;
+        top: 64px;
+        z-index: 800;
+        background: rgba(9, 9, 15, 0.92);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-bottom: 1px solid var(--bd);
+        padding: 14px 0;
+      }
+      [data-theme="light"] .search-bar {
+        background: rgba(242, 240, 235, 0.92);
+      }
+      .search-bar-inner {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .search-input-wrap {
+        flex: 1;
+        min-width: 200px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--glass-md);
+        border: 1px solid var(--bd);
+        border-radius: var(--r-pill);
+        padding: 0 18px;
+        transition: border-color var(--t);
+      }
+      .search-input-wrap:focus-within {
+        border-color: var(--gold);
+      }
+      .search-input-wrap i {
+        color: var(--gold);
+        flex-shrink: 0;
+      }
+      .search-input-wrap input {
+        flex: 1;
+        background: none;
+        border: none;
+        outline: none;
+        font-family: var(--font-body);
+        font-size: 1rem;
+        color: var(--white);
+        padding: 12px 0;
+      }
+      .search-input-wrap input::placeholder {
+        color: var(--txt3);
+      }
+      [data-theme="light"] .search-input-wrap input {
+        color: var(--white);
+      }
+      .search-select {
+        background: var(--glass-md);
+        border: 1px solid var(--bd);
+        border-radius: var(--r-pill);
+        padding: 11px 16px;
+        font-family: var(--font-body);
+        font-size: 0.88rem;
+        color: var(--txt2);
+        cursor: pointer;
+        outline: none;
+        min-height: 46px;
+      }
+
+      /* Layout */
+      .salons-layout {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 28px;
+        padding-block: 36px;
+        position: relative;
+        z-index: 1;
+      }
+
+      /* Filtres */
+      .filters {
+        background: var(--glass);
+        border: 1px solid var(--bd);
+        border-radius: var(--r);
+        padding: 22px;
+      }
+      .filter-bloc {
+        margin-bottom: 24px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--bd);
+      }
+      .filter-bloc:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+      }
+      .filter-bloc-title {
+        font-family: var(--font-ui);
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--txt3);
+        margin-bottom: 12px;
+      }
+      .filter-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+      }
+      .filter-chip {
+        font-family: var(--font-ui);
+        font-size: 0.76rem;
+        font-weight: 600;
+        padding: 6px 14px;
+        border-radius: var(--r-pill);
+        background: var(--glass-md);
+        border: 1px solid var(--bd);
+        color: var(--txt2);
+        cursor: pointer;
+        transition: all var(--t);
+        min-height: 34px;
+      }
+      .filter-chip:hover,
+      .filter-chip.active {
+        background: var(--gold-pale);
+        border-color: rgba(201, 169, 110, 0.4);
+        color: var(--gold);
+      }
+      .filter-reset {
+        font-size: 0.76rem;
+        color: var(--txt3);
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-family: var(--font-body);
+        padding: 0;
+        margin-top: 14px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .filter-reset:hover {
+        color: var(--gold);
+      }
+
+      /* Résultats */
+      .results-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .results-count {
+        font-size: 0.88rem;
+        color: var(--txt2);
+      }
+      .results-count strong {
+        color: var(--gold);
+        font-family: var(--font-ui);
+      }
+      .sort-select {
+        background: var(--glass-md);
+        border: 1px solid var(--bd);
+        border-radius: var(--r-pill);
+        padding: 9px 16px;
+        font-family: var(--font-body);
+        font-size: 0.84rem;
+        color: var(--txt2);
+        cursor: pointer;
+        outline: none;
+      }
+      .empty-state {
+        text-align: center;
+        padding: 80px 20px;
+      }
+      .empty-state i {
+        font-size: 3rem;
+        color: var(--txt3);
+        display: block;
+        margin-bottom: 18px;
+      }
+      .empty-state h3 {
+        font-family: var(--font-display);
+        font-size: 1.8rem;
+        font-style: italic;
+        color: var(--white);
+        margin-bottom: 8px;
+      }
+      .empty-state p {
+        color: var(--txt2);
+        font-size: 0.88rem;
+      }
+      .suggest-title {
+        grid-column: 1/-1;
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 1.5rem;
+        color: var(--white);
+        margin-top: 24px;
+      }
+
+      /* Mobile : filtres en toggle */
+      .filter-toggle-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      @media (min-width: 1024px) {
+        .salons-layout {
+          grid-template-columns: 260px 1fr;
+        }
+        .filters {
+          position: sticky;
+          top: 132px;
+        }
+        .filter-toggle-btn {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="ambient-bg" aria-hidden="true">
+      <div class="ambient-orb ambient-orb--1"></div>
+      <div class="ambient-orb ambient-orb--2"></div>
+    </div>
+    <div class="grain" aria-hidden="true"></div>
+    <div class="toast" id="global-toast" role="status" aria-live="polite"></div>
+
+    <nav class="navbar" role="navigation">
+      <a href="../index.html" class="navbar-logo"
+        ><span class="navbar-logo-dot"></span> Salon<em>·</em>Finder</a
+      >
+      <ul class="navbar-links">
+        <li><a href="../index.html">Accueil</a></li>
+        <li><a href="salons.html" class="active">Salons</a></li>
+        <li><a href="salons.html?premium=true">Premium</a></li>
+      </ul>
+      <div class="navbar-right">
+        <button class="btn-theme" id="theme-btn">
+          <i class="ti ti-moon"></i>
+        </button>
+        <div class="navbar-auth" id="navbar-auth"></div>
+        <button
+          class="hamburger"
+          id="hamburger"
+          aria-label="Menu"
+          aria-expanded="false"
+          aria-controls="mobile-menu"
+        >
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </nav>
+    <div class="mobile-menu" id="mobile-menu">
+      <a href="../index.html"><i class="ti ti-home"></i> Accueil</a>
+      <a href="salons.html" class="active"
+        ><i class="ti ti-scissors"></i> Salons</a
+      >
+      <div class="mobile-menu-sep"></div>
+      <div class="mobile-menu-btns" id="mobile-auth"></div>
+    </div>
+
+    <!-- Hero -->
+    <div class="page-hero">
+      <div class="container">
+        <p class="section-eyebrow rv">Découvrir</p>
+        <h1 class="page-hero-title rv">Tous les <em>salons</em></h1>
+        <p class="page-hero-sub rv" id="count-hero">Chargement...</p>
+      </div>
+    </div>
+
+    <!-- Recherche sticky -->
+    <div class="search-bar">
+      <div class="container">
+        <div class="search-bar-inner">
+          <div class="search-input-wrap" style="flex: 1">
+            <i class="ti ti-search"></i>
+            <input
+              type="text"
+              id="search-q"
+              placeholder="Rechercher un salon, une ville, un service..."
+              oninput="onSearch()"
+              aria-label="Rechercher"
+            />
+          </div>
+          <select
+            class="search-select"
+            id="search-commune"
+            onchange="appliquerFiltres()"
+            aria-label="Commune"
+          >
+            <option value="">Toutes communes</option>
+          </select>
+          <button
+            class="btn btn-glass btn-sm filter-toggle-btn"
+            onclick="toggleFiltres()"
+          >
+            <i class="ti ti-adjustments-horizontal"></i> Filtres
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contenu -->
+    <div class="container">
+      <div class="salons-layout">
+        <aside class="filters rv" id="filters-aside">
+          <div class="filter-bloc">
+            <p class="filter-bloc-title">Catégorie</p>
+            <div class="filter-chips" id="filter-categories">
+              <button
+                class="filter-chip active"
+                data-val=""
+                onclick="setCategorie(this, '')"
+              >
+                Tous
+              </button>
+              <button
+                class="filter-chip"
+                data-val="mixte"
+                onclick="setCategorie(this, 'mixte')"
+              >
+                Mixte
+              </button>
+              <button
+                class="filter-chip"
+                data-val="femme"
+                onclick="setCategorie(this, 'femme')"
+              >
+                Femme
+              </button>
+              <button
+                class="filter-chip"
+                data-val="homme"
+                onclick="setCategorie(this, 'homme')"
+              >
+                Homme
+              </button>
+              <button
+                class="filter-chip"
+                data-val="barbier"
+                onclick="setCategorie(this, 'barbier')"
+              >
+                Barbier
+              </button>
+              <button
+                class="filter-chip"
+                data-val="enfant"
+                onclick="setCategorie(this, 'enfant')"
+              >
+                Enfant
+              </button>
+            </div>
+          </div>
+          <div class="filter-bloc">
+            <p class="filter-bloc-title">Commune</p>
+            <div class="filter-chips" id="filter-communes">
+              <div class="spinner spinner--sm"></div>
+            </div>
+          </div>
+          <div class="filter-bloc">
+            <p class="filter-bloc-title">Options</p>
+            <div class="filter-chips">
+              <button
+                class="filter-chip"
+                id="f-premium"
+                onclick="toggleOption('premium')"
+              >
+                <i class="ti ti-crown"></i> Premium
+              </button>
+              <button
+                class="filter-chip"
+                id="f-verifie"
+                onclick="toggleOption('verifie')"
+              >
+                <i class="ti ti-shield-check"></i> Vérifié
+              </button>
+            </div>
+          </div>
+          <button class="filter-reset" onclick="resetFiltres()">
+            <i class="ti ti-refresh"></i> Réinitialiser
+          </button>
+        </aside>
+
+        <div>
+          <div class="results-header">
+            <p class="results-count" id="results-count"></p>
+            <select
+              class="sort-select"
+              id="sort-select"
+              onchange="appliquerFiltres()"
+              aria-label="Trier par"
+            >
+              <option value="note">Mieux notés</option>
+              <option value="recent">Plus récents</option>
+              <option value="vues">Plus vus</option>
+              <option value="premium">Premium d'abord</option>
+            </select>
+          </div>
+          <div class="salons-grid" id="salons-grid" role="list">
+            <div class="spinner"></div>
+          </div>
+          <div id="pagination" class="pagination"></div>
+        </div>
+      </div>
+    </div>
+
+    <footer role="contentinfo" style="margin-top: 0">
+      <div class="container">
+        <div class="footer-bottom">
+          <p class="footer-bottom-left">© 2025 Salon Finder · Côte d'Ivoire</p>
+          <a href="../index.html" class="btn btn-glass btn-sm"
+            ><i class="ti ti-home"></i> Accueil</a
+          >
+        </div>
+      </div>
+    </footer>
+
+    <script src="../js/theme.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/main.js"></script>
+    <script>
+      const LIMIT = 12;
+      const FILTRES_DEFAUT = {
+        q: "",
+        commune: "",
+        categorie: "",
+        premium: false,
+        verifie: false,
+        tri: "note",
+      };
+      let filtres = { ...FILTRES_DEFAUT };
+      let pageCourante = 1;
+      let searchTimer = null;
+
+      /* ── Helpers : acceptent [..], {data:[..]}, {data:{salons:[..]}}, {salons:[..]} ── */
+      function extraireListe(res, cle) {
+        if (Array.isArray(res)) return res;
+        if (Array.isArray(res?.data)) return res.data;
+        if (cle && Array.isArray(res?.data?.[cle])) return res.data[cle];
+        if (cle && Array.isArray(res?.[cle])) return res[cle];
+        return [];
+      }
+      function extraireTotal(res, liste) {
+        return (
+          res?.total ??
+          res?.data?.total ??
+          res?.pagination?.total ??
+          liste.length
+        );
+      }
+      const apiListeSalons = (params) =>
+        (Salons.liste || Salons.lister).call(Salons, params);
+
+      const carteSalon = (s) =>
+        typeof renderSalonCard === "function"
+          ? renderSalonCard(s)
+          : `<a class="glass-card" href="salon-detail.html?id=${s._id}" style="padding:16px;display:block"><strong>${s.nom}</strong><br><small>${s.commune || ""}</small></a>`;
+
+      function observer() {
+        document.querySelectorAll(".rv:not(.visible)").forEach((el) => {
+          if (typeof rvObs !== "undefined") rvObs.observe(el);
+          else el.classList.add("visible");
+        });
+      }
+
+      /* ── Recherche tolérante : sans accents ni majuscules, tous les mots doivent se retrouver ── */
+      const norm = (s) =>
+        String(s ?? "")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase()
+          .trim();
+      const echapper = (s) =>
+        String(s ?? "").replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[c],
+        );
+
+      function correspond(s, q) {
+        const mots = norm(q).split(/\s+/).filter(Boolean);
+        const texte = norm(
+          [
+            s.nom,
+            s.commune,
+            s.quartier,
+            s.adresse,
+            s.categorie,
+            s.slogan,
+            s.description,
+            ...(Array.isArray(s.services)
+              ? s.services.map((x) => x?.nom || x)
+              : []),
+          ].join(" "),
+        );
+        return mots.every((m) => texte.includes(m));
+      }
+
+      /* ── Paramètres d'URL ── */
+      function initFiltresURL() {
+        const p = new URLSearchParams(window.location.search);
+        if (p.get("q")) {
+          filtres.q = p.get("q");
+          document.getElementById("search-q").value = filtres.q;
+        }
+        if (p.get("commune")) filtres.commune = p.get("commune");
+        if (p.get("premium")) {
+          filtres.premium = true;
+          document.getElementById("f-premium")?.classList.add("active");
+        }
+        if (p.get("categorie")) {
+          filtres.categorie = p.get("categorie");
+          document
+            .querySelectorAll("#filter-categories .filter-chip")
+            .forEach((c) =>
+              c.classList.toggle("active", c.dataset.val === filtres.categorie),
+            );
+        }
+      }
+
+      /* ── Interactions ── */
+      function onSearch() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+          filtres.q = document.getElementById("search-q").value.trim();
+          charger(1);
+        }, 380);
+      }
+
+      function setCategorie(btn, val) {
+        document
+          .querySelectorAll("#filter-categories .filter-chip")
+          .forEach((c) => c.classList.remove("active"));
+        btn.classList.add("active");
+        filtres.categorie = val;
+        charger(1);
+      }
+
+      function toggleOption(opt) {
+        filtres[opt] = !filtres[opt];
+        document
+          .getElementById("f-" + opt)
+          ?.classList.toggle("active", filtres[opt]);
+        charger(1);
+      }
+
+      function toggleFiltres() {
+        const a = document.getElementById("filters-aside");
+        if (a) a.style.display = a.style.display === "none" ? "" : "none";
+      }
+
+      function appliquerFiltres() {
+        filtres.commune = document.getElementById("search-commune").value;
+        filtres.tri = document.getElementById("sort-select").value;
+        document
+          .querySelectorAll("#filter-communes .filter-chip")
+          .forEach((b) =>
+            b.classList.toggle(
+              "active",
+              b.textContent.trim() === filtres.commune,
+            ),
+          );
+        charger(1);
+      }
+
+      function resetFiltres() {
+        filtres = { ...FILTRES_DEFAUT };
+        document.getElementById("search-q").value = "";
+        document.getElementById("search-commune").value = "";
+        document.getElementById("sort-select").value = "note";
+        document
+          .querySelectorAll(".filter-chip")
+          .forEach((c) => c.classList.remove("active"));
+        document
+          .querySelector('#filter-categories [data-val=""]')
+          ?.classList.add("active");
+        charger(1);
+      }
+
+      /* ── Communes ── */
+      async function chargerCommunes() {
+        const sel = document.getElementById("search-commune");
+        const fc = document.getElementById("filter-communes");
+        try {
+          const data = extraireListe(await Salons.communes(), "communes");
+          fc.innerHTML = "";
+          data.forEach((c) => {
+            sel.insertAdjacentHTML(
+              "beforeend",
+              `<option value="${c}">${c}</option>`,
+            );
+            const btn = document.createElement("button");
+            btn.className = "filter-chip";
+            btn.textContent = c;
+            btn.onclick = () => {
+              sel.value = filtres.commune === c ? "" : c;
+              appliquerFiltres();
+            };
+            fc.appendChild(btn);
+          });
+          if (filtres.commune) {
+            sel.value = filtres.commune;
+            fc.querySelectorAll(".filter-chip").forEach((b) =>
+              b.classList.toggle("active", b.textContent === filtres.commune),
+            );
+          }
+        } catch (err) {
+          console.error("Communes :", err);
+          fc.innerHTML = "";
+        }
+      }
+
+      /* ── Aucun résultat : on propose les mieux notés au lieu d'une page vide ── */
+      async function chargerSuggestions() {
+        try {
+          const liste = extraireListe(
+            await apiListeSalons({ tri: "note", limit: 4 }),
+            "salons",
+          );
+          return liste.length
+            ? `<h3 class="suggest-title">Ces salons pourraient vous plaire</h3>${liste.map(carteSalon).join("")}`
+            : "";
+        } catch {
+          return "";
+        }
+      }
+
+      /* ── Chargement des salons ── */
+      async function charger(page = 1) {
+        pageCourante = page;
+        const grid = document.getElementById("salons-grid");
+        const countEl = document.getElementById("results-count");
+        const heroEl = document.getElementById("count-hero");
+        grid.innerHTML = '<div class="spinner"></div>';
+
+        const params = { tri: filtres.tri, page, limit: LIMIT };
+        if (filtres.q) params.q = filtres.q;
+        if (filtres.commune) params.commune = filtres.commune;
+        if (filtres.categorie) params.categorie = filtres.categorie;
+        if (filtres.premium) params.premium = "true";
+        if (filtres.verifie) params.verifie = "true";
+
+        try {
+          const res = await apiListeSalons(params);
+          let liste = extraireListe(res, "salons");
+          let total = extraireTotal(res, liste);
+
+          /* Plan B : le serveur ne trouve rien → on cherche dans tous les champs côté navigateur */
+          if (!liste.length && filtres.q) {
+            const p2 = { ...params, page: 1, limit: 200 };
+            delete p2.q;
+            const tous = extraireListe(await apiListeSalons(p2), "salons");
+            const trouves = tous.filter((s) => correspond(s, filtres.q));
+            total = trouves.length;
+            liste = trouves.slice((page - 1) * LIMIT, page * LIMIT);
+          }
+
+          countEl.innerHTML = `<strong>${total}</strong> salon${total > 1 ? "s" : ""} trouvé${total > 1 ? "s" : ""}`;
+          heroEl.textContent = `${total} salon${total > 1 ? "s" : ""} à découvrir`;
+
+          if (!liste.length) {
+            const suggestions = await chargerSuggestions();
+            const quoi = filtres.q
+              ? `pour « ${echapper(filtres.q)} »`
+              : "avec ces critères";
+            grid.innerHTML = `
+          <div class="empty-state" style="grid-column:1/-1;padding:48px 20px 8px">
+            <i class="ti ti-mood-search"></i>
+            <h3>Aucun résultat ${quoi}</h3>
+            <p>Vérifiez l'orthographe, essayez une commune (ex : Cocody) ou un service (ex : tresses).</p>
+            <button class="btn btn-glass btn-sm" style="margin-top:14px" onclick="resetFiltres()"><i class="ti ti-refresh"></i> Réinitialiser la recherche</button>
+          </div>${suggestions}`;
+            document.getElementById("pagination").innerHTML = "";
+            observer();
+            return;
+          }
+
+          grid.innerHTML = liste.map(carteSalon).join("");
+          dessinerPagination(total);
+          observer();
+        } catch (err) {
+          console.error("Chargement salons :", err);
+          heroEl.textContent = "Erreur de chargement";
+          countEl.textContent = "";
+          grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+        <i class="ti ti-wifi-off"></i><h3>Chargement impossible</h3>
+        <p>${echapper(err.message || "Erreur réseau")}<br>Le serveur gratuit peut mettre ~30 s à se réveiller.</p>
+        <button class="btn btn-gold btn-sm" style="margin-top:14px" onclick="charger(${page})">Réessayer</button></div>`;
+        }
+      }
+
+      function dessinerPagination(total) {
+        const pages = Math.ceil(total / LIMIT);
+        const el = document.getElementById("pagination");
+        if (pages <= 1) {
+          el.innerHTML = "";
+          return;
+        }
+        el.style.cssText =
+          "display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:32px";
+        el.innerHTML = Array.from({ length: pages }, (_, i) => i + 1)
+          .map(
+            (n) =>
+              `<button class="filter-chip ${n === pageCourante ? "active" : ""}" onclick="charger(${n});window.scrollTo({top:0,behavior:'smooth'})">${n}</button>`,
+          )
+          .join("");
+      }
+
+      /* ── Init ── */
+      document.addEventListener("DOMContentLoaded", async () => {
+        initFiltresURL();
+        await chargerCommunes();
+        charger(1);
+      });
+    </script>
+  </body>
+</html>

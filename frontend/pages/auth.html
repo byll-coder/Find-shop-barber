@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Connexion — Salon Finder</title>
+    <link rel="icon" type="image/png" href="../logo/logo-salonfinder.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"
+    />
+    <link rel="stylesheet" href="../css/styles.css" />
+    <style>
+      body {
+        min-height: 100svh;
+        overflow-x: hidden;
+      }
+      .auth-page {
+        min-height: 100svh;
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+      /* Visuel gauche (desktop) */
+      .auth-visual {
+        display: none;
+        position: relative;
+        overflow: hidden;
+        background: var(--bg2);
+      }
+      .auth-visual-bg {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          135deg,
+          rgba(201, 169, 110, 0.08) 0%,
+          transparent 50%,
+          rgba(120, 100, 180, 0.06) 100%
+        );
+      }
+      .auth-visual-img {
+        position: absolute;
+        inset: 0;
+        background: url("https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&q=80")
+          center/cover no-repeat;
+        opacity: 0.25;
+      }
+      .auth-visual-content {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 100%;
+        padding: 40px;
+      }
+      .auth-visual-logo {
+        font-family: var(--font-display);
+        font-size: 1.5rem;
+        font-style: italic;
+        color: var(--white);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .auth-visual-logo-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--gold);
+      }
+      .auth-visual-title {
+        font-family: var(--font-display);
+        font-size: clamp(2rem, 3.5vw, 3rem);
+        font-style: italic;
+        font-weight: 400;
+        color: var(--white);
+        line-height: 1.1;
+      }
+      .auth-visual-title em {
+        color: var(--gold);
+        font-style: normal;
+      }
+      .auth-visual-steps {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        margin-top: 24px;
+      }
+      .auth-step {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+      }
+      .auth-step-ico {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        background: var(--gold-pale);
+        border: 1px solid rgba(201, 169, 110, 0.25);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .auth-step-ico i {
+        color: var(--gold);
+        font-size: 0.95rem;
+      }
+      .auth-step strong {
+        display: block;
+        font-size: 0.9rem;
+        color: var(--white);
+        margin-bottom: 2px;
+      }
+      .auth-step span {
+        font-size: 0.8rem;
+        color: var(--txt2);
+        font-weight: 300;
+      }
+      /* Formulaire */
+      .auth-form-side {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 100px 24px 48px;
+        background: var(--bg);
+        min-height: 100svh;
+      }
+      .auth-box {
+        width: 100%;
+        max-width: 420px;
+      }
+      .auth-tabs {
+        display: flex;
+        gap: 4px;
+        background: var(--glass);
+        border: 1px solid var(--bd);
+        border-radius: var(--r-pill);
+        padding: 4px;
+        margin-bottom: 32px;
+      }
+      .auth-tab {
+        flex: 1;
+        padding: 10px;
+        border: none;
+        border-radius: var(--r-pill);
+        font-family: var(--font-ui);
+        font-size: 0.82rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: all var(--t);
+        color: var(--txt2);
+        background: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        min-height: 42px;
+      }
+      .auth-tab.active {
+        background: var(--gold);
+        color: #1a1008;
+        box-shadow: 0 2px 12px var(--gold-glow);
+      }
+      .auth-heading {
+        font-family: var(--font-display);
+        font-size: 2rem;
+        font-style: italic;
+        color: var(--white);
+        margin-bottom: 5px;
+      }
+      .auth-sub {
+        font-size: 0.84rem;
+        color: var(--txt2);
+        margin-bottom: 24px;
+        font-weight: 300;
+      }
+      .role-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 22px;
+      }
+      .role-card {
+        padding: 16px 12px;
+        text-align: center;
+        background: var(--glass);
+        border: 1.5px solid var(--bd);
+        border-radius: var(--r);
+        cursor: pointer;
+        transition: all var(--t);
+        min-height: 90px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+      .role-card i {
+        font-size: 1.6rem;
+        color: var(--txt3);
+        transition: color var(--t);
+      }
+      .role-card-label {
+        font-family: var(--font-ui);
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--txt2);
+      }
+      .role-card-sub {
+        font-size: 0.72rem;
+        color: var(--txt3);
+        font-weight: 300;
+      }
+      .role-card:hover,
+      .role-card:focus-visible {
+        border-color: rgba(201, 169, 110, 0.3);
+        outline: none;
+      }
+      .role-card.active {
+        border-color: var(--gold);
+        background: var(--gold-pale);
+      }
+      .role-card.active i,
+      .role-card.active .role-card-label {
+        color: var(--gold);
+      }
+      .auth-sep {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 20px 0;
+        color: var(--txt3);
+        font-size: 0.76rem;
+      }
+      .auth-sep::before,
+      .auth-sep::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: var(--bd);
+      }
+      .auth-footer {
+        text-align: center;
+        font-size: 0.84rem;
+        color: var(--txt2);
+        margin-top: 18px;
+      }
+      .auth-footer button {
+        background: none;
+        border: none;
+        color: var(--gold);
+        cursor: pointer;
+        font-size: 0.84rem;
+        text-decoration: underline;
+      }
+      @media (min-width: 900px) {
+        .auth-page {
+          grid-template-columns: 1fr 1fr;
+        }
+        .auth-visual {
+          display: flex;
+        }
+        .auth-form-side {
+          padding: 60px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="grain" aria-hidden="true"></div>
+    <div class="toast" id="global-toast" role="status" aria-live="polite"></div>
+
+    <div class="auth-page">
+      <!-- Visuel gauche -->
+      <div class="auth-visual">
+        <div class="auth-visual-bg"></div>
+        <div class="auth-visual-img"></div>
+        <div class="auth-visual-content">
+          <a href="../index.html" class="auth-visual-logo"
+            ><span class="auth-visual-logo-dot"></span> Salon·Finder</a
+          >
+          <div>
+            <h2 class="auth-visual-title">
+              Trouvez votre salon<br /><em>idéal.</em>
+            </h2>
+            <div class="auth-visual-steps">
+              <div class="auth-step">
+                <div class="auth-step-ico"><i class="ti ti-search"></i></div>
+                <div>
+                  <strong>Recherchez</strong
+                  ><span>Par commune, service ou style.</span>
+                </div>
+              </div>
+              <div class="auth-step">
+                <div class="auth-step-ico"><i class="ti ti-star"></i></div>
+                <div>
+                  <strong>Comparez</strong
+                  ><span>Notes, avis et galeries photos.</span>
+                </div>
+              </div>
+              <div class="auth-step">
+                <div class="auth-step-ico"><i class="ti ti-calendar"></i></div>
+                <div>
+                  <strong>Réservez</strong
+                  ><span>Directement en ligne, en quelques secondes.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p style="font-size: 0.72rem; color: var(--txt3)">
+            © 2025 Salon Finder · Côte d'Ivoire
+          </p>
+        </div>
+      </div>
+
+      <!-- Formulaire -->
+      <div class="auth-form-side">
+        <div class="auth-box">
+          <a
+            href="../index.html"
+            style="
+              display: inline-flex;
+              align-items: center;
+              gap: 6px;
+              font-size: 0.8rem;
+              color: var(--txt3);
+              margin-bottom: 20px;
+            "
+            ><i class="ti ti-arrow-left"></i> Retour à l'accueil</a
+          >
+
+          <div class="auth-tabs">
+            <button
+              class="auth-tab active"
+              id="tab-cx"
+              onclick="setMode('connexion')"
+            >
+              <i class="ti ti-login"></i> Connexion
+            </button>
+            <button
+              class="auth-tab"
+              id="tab-ins"
+              onclick="setMode('inscription')"
+            >
+              <i class="ti ti-user-plus"></i> Inscription
+            </button>
+          </div>
+
+          <!-- CONNEXION -->
+          <div id="form-connexion">
+            <h2 class="auth-heading">Bon retour !</h2>
+            <p class="auth-sub">Connectez-vous à votre espace Salon Finder.</p>
+            <div id="al-cx" class="alert alert-error"></div>
+
+            <div class="form-group">
+              <label class="form-label" for="cx-email">Email</label>
+              <input
+                type="email"
+                id="cx-email"
+                class="form-input"
+                placeholder="votre@email.com"
+                autocomplete="email"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="cx-pass">Mot de passe</label>
+              <input
+                type="password"
+                id="cx-pass"
+                class="form-input"
+                placeholder="••••••••"
+                autocomplete="current-password"
+                onkeydown="if (event.key === 'Enter') seConnecter();"
+              />
+            </div>
+            <button
+              class="btn btn-gold btn-full"
+              id="btn-cx"
+              onclick="seConnecter()"
+              style="margin-top: 4px"
+            >
+              <i class="ti ti-login"></i> Se connecter
+            </button>
+
+            <div class="auth-sep">ou</div>
+            <div class="auth-footer">
+              Pas encore de compte ?
+              <button onclick="setMode('inscription')">Créer un compte</button>
+            </div>
+          </div>
+
+          <!-- INSCRIPTION -->
+          <div id="form-inscription" style="display: none">
+            <h2 class="auth-heading">Rejoignez-nous</h2>
+            <p class="auth-sub">Créez votre compte gratuitement.</p>
+            <div id="al-ins" class="alert alert-error"></div>
+
+            <div
+              class="role-grid"
+              role="radiogroup"
+              aria-label="Type de compte"
+            >
+              <div
+                class="role-card active"
+                id="role-client"
+                data-role="client"
+                role="radio"
+                aria-checked="true"
+                tabindex="0"
+              >
+                <i class="ti ti-user"></i
+                ><span class="role-card-label">Client</span
+                ><span class="role-card-sub">Je cherche un salon</span>
+              </div>
+              <div
+                class="role-card"
+                id="role-salon"
+                data-role="salon"
+                role="radio"
+                aria-checked="false"
+                tabindex="0"
+              >
+                <i class="ti ti-scissors"></i
+                ><span class="role-card-label">Salon Pro</span
+                ><span class="role-card-sub">Je gère un salon</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="ins-nom">Nom complet</label
+              ><input
+                type="text"
+                id="ins-nom"
+                class="form-input"
+                placeholder="Votre nom"
+                autocomplete="name"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="ins-email">Email</label
+              ><input
+                type="email"
+                id="ins-email"
+                class="form-input"
+                placeholder="votre@email.com"
+                autocomplete="email"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="ins-tel"
+                >Téléphone
+                <span style="color: var(--txt3); font-weight: 300"
+                  >(optionnel)</span
+                ></label
+              ><input
+                type="tel"
+                id="ins-tel"
+                class="form-input"
+                placeholder="+225 07 00 00 00 00"
+                autocomplete="tel"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="ins-commune"
+                >Commune
+                <span style="color: var(--txt3); font-weight: 300"
+                  >(optionnel)</span
+                ></label
+              ><input
+                type="text"
+                id="ins-commune"
+                class="form-input"
+                placeholder="Cocody, Marcory..."
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="ins-pass">Mot de passe</label
+              ><input
+                type="password"
+                id="ins-pass"
+                class="form-input"
+                placeholder="6 caractères minimum"
+                autocomplete="new-password"
+                onkeydown="if (event.key === 'Enter') sInscrire();"
+              />
+            </div>
+            <button
+              class="btn btn-gold btn-full"
+              id="btn-ins"
+              onclick="sInscrire()"
+              style="margin-top: 4px"
+            >
+              <i class="ti ti-user-plus"></i> Créer mon compte
+            </button>
+
+            <div class="auth-sep">ou</div>
+            <div class="auth-footer">
+              Déjà un compte ?
+              <button onclick="setMode('connexion')">Se connecter</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="../js/theme.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/main.js"></script>
+    <script>
+      let roleChoisi = "client";
+      const $ = (id) => document.getElementById(id);
+      const esc = (s) =>
+        String(s ?? "").replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[c],
+        );
+      const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+      function montrerErreur(id, message) {
+        const al = $(id);
+        al.innerHTML = `<i class="ti ti-alert-circle"></i> ${esc(message)}`;
+        al.classList.add("show");
+      }
+
+      /* ── Appel d'authentification robuste ──
+     Accepte {token,user}, {data:{token,user}} ou {token, data:{user}} (apiFetch perdrait le token dans ce dernier cas)
+     et donne des messages clairs (serveur Render qui se réveille, coupure réseau…) */
+      async function appelAuth(chemin, corps) {
+        let res, json;
+        try {
+          res = await fetch(API_URL + chemin, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(corps),
+          });
+        } catch {
+          throw new Error(
+            "Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.",
+          );
+        }
+        try {
+          json = await res.json();
+        } catch {
+          throw new Error(
+            "Le serveur démarre, réessayez dans quelques secondes.",
+          );
+        }
+        if (!res.ok) {
+          throw new Error(
+            json.message ||
+              json.error ||
+              (res.status === 429
+                ? "Trop de tentatives. Réessayez dans 15 minutes."
+                : "Erreur serveur, réessayez."),
+          );
+        }
+        const d = json.data && typeof json.data === "object" ? json.data : {};
+        return {
+          token: json.token || d.token,
+          user: json.user || d.user || (d._id ? d : null),
+        };
+      }
+
+      function enChargement(btn, actif, html) {
+        btn.disabled = actif;
+        if (actif) {
+          btn.dataset.html = btn.innerHTML;
+          btn.innerHTML =
+            '<div class="spinner spinner-sm" style="border-top-color:#1a1008;"></div> ' +
+            html;
+        } else if (btn.dataset.html) btn.innerHTML = btn.dataset.html;
+      }
+
+      function init() {
+        // Déjà connecté avec un utilisateur valide → on redirige ; sinon on nettoie une session corrompue
+        if (Session.estConnecte()) {
+          const user = Session.getUser();
+          if (user && user.role) {
+            redigerApresConnexion(user);
+            return;
+          }
+          Session.clear();
+        }
+        const p = new URLSearchParams(window.location.search);
+        if (p.get("role") === "salon") setRole("salon");
+        setMode(p.get("mode") || "connexion");
+      }
+
+      function setMode(mode) {
+        const cx = mode !== "inscription";
+        $("form-connexion").style.display = cx ? "block" : "none";
+        $("form-inscription").style.display = cx ? "none" : "block";
+        $("tab-cx").classList.toggle("active", cx);
+        $("tab-ins").classList.toggle("active", !cx);
+        $("al-cx").classList.remove("show");
+        $("al-ins").classList.remove("show");
+        document.title = cx
+          ? "Connexion — Salon Finder"
+          : "Inscription — Salon Finder";
+      }
+
+      function setRole(role) {
+        roleChoisi = role;
+        ["client", "salon"].forEach((r) => {
+          const c = $("role-" + r);
+          c.classList.toggle("active", r === role);
+          c.setAttribute("aria-checked", String(r === role));
+        });
+      }
+
+      // cartes de rôle utilisables au clavier (Entrée / Espace)
+      document.querySelectorAll(".role-card").forEach((c) => {
+        c.addEventListener("click", () => setRole(c.dataset.role));
+        c.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setRole(c.dataset.role);
+          }
+        });
+      });
+
+      async function seConnecter() {
+        $("al-cx").classList.remove("show");
+        const email = $("cx-email").value.trim().toLowerCase();
+        const password = $("cx-pass").value;
+        if (!email || !password)
+          return montrerErreur("al-cx", "Email et mot de passe requis.");
+        if (!EMAIL_OK.test(email))
+          return montrerErreur("al-cx", "Adresse email invalide.");
+
+        const btn = $("btn-cx");
+        enChargement(btn, true, "Connexion…");
+        try {
+          const result = await appelAuth("/auth/connexion", {
+            email,
+            password,
+          });
+          if (!result.token || !result.user)
+            throw new Error("Réponse inattendue du serveur. Réessayez.");
+          Session.setToken(result.token);
+          Session.setUser(result.user);
+          afficherToast("Connexion réussie !", "success");
+          setTimeout(() => redigerApresConnexion(result.user), 700);
+        } catch (err) {
+          montrerErreur("al-cx", err.message);
+          enChargement(btn, false);
+        }
+      }
+
+      async function sInscrire() {
+        $("al-ins").classList.remove("show");
+        const nom = $("ins-nom").value.trim();
+        const email = $("ins-email").value.trim().toLowerCase();
+        const password = $("ins-pass").value;
+        const telephone = $("ins-tel").value.trim();
+        const commune = $("ins-commune").value.trim();
+
+        if (!nom || !email || !password)
+          return montrerErreur("al-ins", "Nom, email et mot de passe requis.");
+        if (!EMAIL_OK.test(email))
+          return montrerErreur("al-ins", "Adresse email invalide.");
+        if (password.length < 6)
+          return montrerErreur(
+            "al-ins",
+            "Mot de passe trop court (6 caractères minimum).",
+          );
+
+        const btn = $("btn-ins");
+        enChargement(btn, true, "Création…");
+        try {
+          const result = await appelAuth("/auth/inscription", {
+            nom,
+            email,
+            password,
+            role: roleChoisi,
+            telephone,
+            commune,
+          });
+          if (!result.token || !result.user)
+            throw new Error("Réponse inattendue du serveur. Réessayez.");
+          Session.setToken(result.token);
+          Session.setUser(result.user);
+          afficherToast("Compte créé !", "success");
+          setTimeout(() => redigerApresConnexion(result.user), 700);
+        } catch (err) {
+          montrerErreur("al-ins", err.message);
+          enChargement(btn, false);
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", init);
+    </script>
+  </body>
+</html>

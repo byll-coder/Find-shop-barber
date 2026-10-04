@@ -1,0 +1,10 @@
+"use strict";
+const router = require("express").Router();
+const ctrl = require("../controllers/serviceController");
+const { proteger } = require("../middleware/auth");
+const { autoriser } = require("../middleware/role");
+router.get("/", ctrl.liste);
+router.post("/", proteger, autoriser("salon"), ctrl.creer);
+router.put("/:id", proteger, autoriser("salon"), ctrl.modifier);
+router.delete("/:id", proteger, autoriser("salon"), ctrl.supprimer);
+module.exports = router;

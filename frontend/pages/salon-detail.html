@@ -1,0 +1,847 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Salon — Salon Finder</title>
+    <link rel="icon" type="image/png" href="../logo/logo-salonfinder.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"
+    />
+    <link rel="stylesheet" href="../css/styles.css" />
+    <style>
+      /* Cover */
+      .detail-cover {
+        height: min(55vh, 480px);
+        position: relative;
+        overflow: hidden;
+        margin-top: 64px;
+        background: var(--bg3);
+      }
+      .detail-cover img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .detail-cover-ph {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(
+          135deg,
+          var(--gold-pale),
+          rgba(120, 100, 180, 0.1)
+        );
+      }
+      .detail-cover-ph i {
+        font-size: 5rem;
+        color: var(--txt3);
+      }
+      .detail-cover-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          to bottom,
+          transparent 40%,
+          rgba(9, 9, 15, 0.95) 100%
+        );
+      }
+      /* Header */
+      .detail-header {
+        position: relative;
+        z-index: 1;
+        margin-top: -80px;
+        padding-bottom: 32px;
+        border-bottom: 1px solid var(--bd);
+      }
+      .detail-header-inner {
+        display: flex;
+        align-items: flex-end;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+      .detail-logo {
+        width: 80px;
+        height: 80px;
+        border-radius: var(--r);
+        border: 2px solid var(--bd2);
+        background: var(--bg2);
+        overflow: hidden;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .detail-logo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .detail-logo-ph i {
+        font-size: 2rem;
+        color: var(--txt3);
+      }
+      .detail-meta {
+        flex: 1;
+        min-width: 0;
+      }
+      .detail-badges {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+      }
+      .detail-badge {
+        font-family: var(--font-ui);
+        font-size: 0.66rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 3px 10px;
+        border-radius: var(--r-pill);
+      }
+      .badge-gold {
+        background: linear-gradient(135deg, var(--gold), var(--gold2));
+        color: #1a1008;
+      }
+      .badge-green {
+        background: rgba(0, 196, 140, 0.15);
+        border: 1px solid rgba(0, 196, 140, 0.3);
+        color: #00c48c;
+      }
+      .detail-name {
+        font-family: var(--font-display);
+        font-size: clamp(1.8rem, 5vw, 2.8rem);
+        font-style: italic;
+        color: var(--white);
+        line-height: 1.1;
+      }
+      .detail-location {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.88rem;
+        color: var(--txt2);
+        margin-top: 4px;
+      }
+      .detail-rating {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 6px;
+        flex-wrap: wrap;
+      }
+      .detail-stars {
+        color: var(--gold);
+        font-size: 0.9rem;
+      }
+      .detail-note {
+        font-family: var(--font-ui);
+        font-weight: 700;
+        font-size: 1rem;
+        color: var(--white);
+      }
+      .detail-nb-avis {
+        font-size: 0.8rem;
+        color: var(--txt2);
+      }
+      .detail-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+      }
+      /* Layout */
+      .detail-layout {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 28px;
+        padding-block: 36px;
+        position: relative;
+        z-index: 1;
+      }
+      .detail-bloc {
+        background: var(--glass);
+        border: 1px solid var(--bd);
+        border-radius: var(--r);
+        padding: 24px;
+      }
+      .detail-bloc-title {
+        font-family: var(--font-ui);
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--gold);
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      /* Contact */
+      .contact-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .contact-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 0.88rem;
+        color: var(--txt2);
+      }
+      .contact-item i {
+        width: 32px;
+        height: 32px;
+        background: var(--gold-pale);
+        border: 1px solid rgba(201, 169, 110, 0.2);
+        border-radius: var(--r-sm);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--gold);
+        font-size: 0.9rem;
+        flex-shrink: 0;
+      }
+      .contact-item a {
+        color: var(--txt2);
+        transition: color var(--t);
+      }
+      .contact-item a:hover {
+        color: var(--gold);
+      }
+      /* Horaires */
+      .horaires-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .horaire-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.86rem;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--bd);
+      }
+      .horaire-row:last-child {
+        border-bottom: none;
+      }
+      .horaire-row.today {
+        color: var(--gold);
+        font-weight: 600;
+      }
+      .horaire-jour {
+        text-transform: capitalize;
+        color: var(--txt2);
+      }
+      .horaire-row.today .horaire-jour {
+        color: var(--gold);
+      }
+      .horaire-heure {
+        color: var(--white);
+      }
+      .horaire-ferme {
+        color: var(--txt3);
+      }
+      .badge-ouvert {
+        font-size: 0.68rem;
+        background: rgba(0, 196, 140, 0.15);
+        border: 1px solid rgba(0, 196, 140, 0.3);
+        color: #00c48c;
+        padding: 2px 8px;
+        border-radius: var(--r-pill);
+      }
+      /* Services */
+      .services-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .service-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 16px;
+        background: var(--bg3);
+        border: 1px solid var(--bd);
+        border-radius: var(--r-sm);
+      }
+      .service-name {
+        font-weight: 500;
+        font-size: 0.9rem;
+        color: var(--white);
+      }
+      .service-desc {
+        font-size: 0.76rem;
+        color: var(--txt2);
+        margin-top: 2px;
+      }
+      .service-prix {
+        font-family: var(--font-ui);
+        font-weight: 700;
+        font-size: 0.96rem;
+        color: var(--gold);
+        white-space: nowrap;
+      }
+      .service-duree {
+        font-size: 0.72rem;
+        color: var(--txt3);
+      }
+      /* Galerie */
+      .galerie-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+      .galerie-img {
+        aspect-ratio: 1;
+        border-radius: var(--r-sm);
+        overflow: hidden;
+        background: var(--bg3);
+        cursor: pointer;
+      }
+      .galerie-img img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.4s ease;
+      }
+      .galerie-img:hover img {
+        transform: scale(1.05);
+      }
+      /* Avis */
+      .avis-list {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .avis-item {
+        display: flex;
+        gap: 12px;
+        padding: 16px;
+        background: var(--bg3);
+        border: 1px solid var(--bd);
+        border-radius: var(--r-sm);
+      }
+      .avis-avatar {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        flex-shrink: 0;
+        background: var(--gold-pale);
+        border: 1px solid rgba(201, 169, 110, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-display);
+        font-size: 1.1rem;
+        color: var(--gold);
+        font-style: italic;
+        overflow: hidden;
+      }
+      .avis-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .avis-auteur {
+        font-weight: 600;
+        font-size: 0.88rem;
+        color: var(--white);
+      }
+      .avis-date {
+        font-size: 0.72rem;
+        color: var(--txt3);
+        margin-left: 8px;
+      }
+      .avis-stars {
+        color: var(--gold);
+        font-size: 0.8rem;
+        margin: 4px 0;
+      }
+      .avis-commentaire {
+        font-size: 0.86rem;
+        color: var(--txt2);
+        line-height: 1.6;
+        font-weight: 300;
+      }
+      .avis-form {
+        background: var(--bg3);
+        border: 1px solid var(--bd);
+        border-radius: var(--r-sm);
+        padding: 18px;
+        margin-top: 16px;
+      }
+      .avis-form-title {
+        font-family: var(--font-ui);
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--txt2);
+        margin-bottom: 14px;
+      }
+      .star-picker {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 14px;
+      }
+      .star-btn {
+        font-size: 1.5rem;
+        color: var(--txt3);
+        cursor: pointer;
+        background: none;
+        border: none;
+        transition: color var(--t);
+        padding: 2px;
+      }
+      .star-btn.active,
+      .star-btn:hover {
+        color: var(--gold);
+      }
+      @media (min-width: 768px) {
+        .galerie-grid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+      @media (min-width: 1024px) {
+        .detail-layout {
+          grid-template-columns: 1fr 340px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="ambient-bg" aria-hidden="true">
+      <div class="ambient-orb ambient-orb--1"></div>
+    </div>
+    <div class="grain" aria-hidden="true"></div>
+    <div class="toast" id="global-toast" role="status" aria-live="polite"></div>
+
+    <nav class="navbar" role="navigation">
+      <a href="../index.html" class="navbar-logo"
+        ><span class="navbar-logo-dot"></span> Salon<em>·</em>Finder</a
+      >
+      <ul class="navbar-links">
+        <li><a href="../index.html">Accueil</a></li>
+        <li><a href="salons.html">Salons</a></li>
+      </ul>
+      <div class="navbar-right">
+        <button class="btn-theme" id="theme-btn">
+          <i class="ti ti-moon"></i>
+        </button>
+        <div class="navbar-auth" id="navbar-auth"></div>
+        <button
+          class="hamburger"
+          id="hamburger"
+          aria-label="Menu"
+          aria-expanded="false"
+          aria-controls="mobile-menu"
+        >
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </nav>
+    <div class="mobile-menu" id="mobile-menu">
+      <a href="../index.html"><i class="ti ti-home"></i> Accueil</a>
+      <a href="salons.html"><i class="ti ti-scissors"></i> Salons</a>
+      <div class="mobile-menu-sep"></div>
+      <div class="mobile-menu-btns" id="mobile-auth"></div>
+    </div>
+
+    <div id="page-content">
+      <div
+        style="
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 80vh;
+        "
+      >
+        <div class="spinner"></div>
+      </div>
+    </div>
+
+    <script src="../js/theme.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/main.js"></script>
+    <script>
+      const salonId = new URLSearchParams(window.location.search).get("id");
+      const JOURS_FR = [
+        "dimanche",
+        "lundi",
+        "mardi",
+        "mercredi",
+        "jeudi",
+        "vendredi",
+        "samedi",
+      ];
+      const JOURS_ORDER = [
+        "lundi",
+        "mardi",
+        "mercredi",
+        "jeudi",
+        "vendredi",
+        "samedi",
+        "dimanche",
+      ];
+      let noteChoisie = 0;
+
+      /* ── Helpers ── */
+      const esc = (s) =>
+        String(s ?? "").replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[c],
+        );
+      const idDe = (x) => (x && typeof x === "object" ? x._id : x);
+      const enListe = (r, cle) =>
+        Array.isArray(r)
+          ? r
+          : Array.isArray(r?.data)
+            ? r.data
+            : cle && Array.isArray(r?.[cle])
+              ? r[cle]
+              : [];
+      const etoiles = (n) => {
+        const k = Math.max(0, Math.min(5, Math.round(n || 0)));
+        return "★".repeat(k) + "☆".repeat(5 - k);
+      };
+      const dateFr = (d) => {
+        const x = new Date(d);
+        return isNaN(x)
+          ? ""
+          : x.toLocaleDateString("fr-FR", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            });
+      };
+
+      /* ── Horaires ── */
+      function renderHoraire(salon) {
+        if (!salon.horaires)
+          return '<p style="color:var(--txt3)">Non renseigné</p>';
+        const aujourdhui = JOURS_FR[new Date().getDay()];
+        return JOURS_ORDER.map((j) => {
+          const h = salon.horaires[j];
+          const t = j === aujourdhui;
+          if (!h?.ouvert)
+            return `<div class="horaire-row ${t ? "today" : ""}"><span class="horaire-jour">${j}</span><span class="horaire-ferme">Fermé</span></div>`;
+          return `<div class="horaire-row ${t ? "today" : ""}"><span class="horaire-jour">${j}${t ? ' <span class="badge-ouvert">Aujourd\'hui</span>' : ""}</span><span class="horaire-heure">${esc(h.debut)} – ${esc(h.fin)}</span></div>`;
+        }).join("");
+      }
+
+      /* ── Favoris ── */
+      async function toggleFavori(id) {
+        if (!Session.estConnecte()) {
+          window.location.href = "auth.html?mode=connexion";
+          return;
+        }
+        try {
+          await Favoris.toggle(id);
+          const btn = document.getElementById("btn-favori");
+          const actif = btn?.dataset.etat !== "oui";
+          if (btn) {
+            btn.dataset.etat = actif ? "oui" : "non";
+            btn.innerHTML = actif
+              ? '<i class="ti ti-heart-filled"></i> Sauvegardé'
+              : '<i class="ti ti-heart"></i> Favoris';
+            btn.className = actif
+              ? "btn btn-gold btn-sm"
+              : "btn btn-glass btn-sm";
+          }
+          afficherToast(
+            actif ? "Ajouté aux favoris !" : "Retiré des favoris",
+            "success",
+          );
+        } catch (err) {
+          afficherToast(err.message || "Erreur", "error");
+        }
+      }
+
+      /* ── Contacter (redirige vers la connexion si besoin) ── */
+      function contacter(proprietaireId, sId) {
+        if (!Session.estConnecte()) {
+          window.location.href = "auth.html?mode=connexion";
+          return;
+        }
+        window.location.href = `messages.html?to=${encodeURIComponent(proprietaireId)}&salon=${encodeURIComponent(sId)}`;
+      }
+
+      /* ── Avis ── */
+      function setNote(n) {
+        noteChoisie = n;
+        document
+          .querySelectorAll(".star-btn")
+          .forEach((b, i) => b.classList.toggle("active", i < n));
+      }
+
+      function renderAvis(a) {
+        const init = (a.auteur?.nom || "?")[0].toUpperCase();
+        return `<div class="avis-item">
+      <div class="avis-avatar">${a.auteur?.avatar ? `<img src="${esc(a.auteur.avatar)}" alt="">` : init}</div>
+      <div style="flex:1;">
+        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;">
+          <span class="avis-auteur">${esc(a.auteur?.nom || "Anonyme")}</span>
+          <span class="avis-date">${dateFr(a.createdAt)}</span>
+        </div>
+        <div class="avis-stars">${etoiles(a.note)}</div>
+        ${a.commentaire ? `<p class="avis-commentaire">${esc(a.commentaire)}</p>` : ""}
+      </div>
+    </div>`;
+      }
+
+      async function soumettreAvis() {
+        if (!Session.estConnecte())
+          return afficherToast("Connectez-vous pour laisser un avis", "error");
+        if (!noteChoisie) return afficherToast("Choisissez une note", "error");
+        const champ = document.getElementById("avis-commentaire");
+        try {
+          // apiFetch renvoie déjà json.data : plus de « const { data } = … »
+          const res = await Salons.ajouterAvis(salonId, {
+            note: noteChoisie,
+            commentaire: champ.value.trim(),
+          });
+          const avis = res?.avis || res?.data || res;
+          const liste = document.getElementById("avis-liste");
+          if (!liste.querySelector(".avis-item")) liste.innerHTML = "";
+          liste.insertAdjacentHTML("afterbegin", renderAvis(avis));
+          champ.value = "";
+          setNote(0);
+          afficherToast("Avis publié !", "success");
+        } catch (err) {
+          afficherToast(err.message, "error");
+        }
+      }
+
+      /* ── Chargement du salon ── */
+      async function chargerSalon() {
+        if (!salonId) {
+          window.location.href = "salons.html";
+          return;
+        }
+        try {
+          const rep = await Salons.detail(salonId);
+          const s = rep?.salon || rep?.data?.salon || rep?.data || rep;
+          if (!s || !s._id) throw new Error("Salon introuvable");
+
+          /* Services, avis et favori : si le détail ne les renvoie pas, on les demande à part */
+          const connecte = Session.estConnecte();
+          const [services, avis, favRes] = await Promise.all([
+            Array.isArray(s.services)
+              ? s.services
+              : Services.liste(s._id)
+                  .then((r) => enListe(r, "services"))
+                  .catch(() => []),
+            Array.isArray(s.avis)
+              ? s.avis
+              : Avis.liste(s._id)
+                  .then((r) => enListe(r, "avis"))
+                  .catch(() => []),
+            s.estFavori !== undefined || !connecte
+              ? s.estFavori
+              : Favoris.check(s._id).catch(() => false),
+          ]);
+          const estFavori =
+            favRes === true ||
+            favRes?.estFavori === true ||
+            favRes?.favori === true ||
+            favRes?.isFavori === true;
+
+          document.title = `${s.nom} — Salon Finder`;
+
+          const user = Session.getUser();
+          const proprioId = idDe(s.proprietaire);
+          // ⚠ avant : undefined === undefined donnait « propriétaire » à tout visiteur non connecté
+          const isOwner =
+            !!user &&
+            (user.role === "admin" || (!!proprioId && user._id === proprioId));
+          const isClient = user?.role === "client";
+
+          document.getElementById("page-content").innerHTML = `
+      <div class="detail-cover">
+        ${s.photoCouverture ? `<img src="${esc(s.photoCouverture)}" alt="${esc(s.nom)}">` : `<div class="detail-cover-ph"><i class="ti ti-scissors"></i></div>`}
+        <div class="detail-cover-overlay"></div>
+      </div>
+
+      <div class="container">
+        <div class="detail-header">
+          <div class="detail-header-inner">
+            <div class="detail-logo">
+              ${s.logo ? `<img src="${esc(s.logo)}" alt="${esc(s.nom)}">` : `<div class="detail-logo-ph"><i class="ti ti-scissors"></i></div>`}
+            </div>
+            <div class="detail-meta">
+              <div class="detail-badges">
+                ${s.isPremium ? '<span class="detail-badge badge-gold"><i class="ti ti-crown"></i> Premium</span>' : ""}
+                ${s.isVerifie ? '<span class="detail-badge badge-green"><i class="ti ti-shield-check"></i> Vérifié</span>' : ""}
+                <span class="detail-badge" style="background:var(--glass);border:1px solid var(--bd);color:var(--txt2);">${esc(s.categorie || "Mixte")}</span>
+              </div>
+              <h1 class="detail-name">${esc(s.nom)}</h1>
+              ${s.slogan ? `<p style="font-size:.88rem;color:var(--txt2);font-style:italic;margin-top:2px;">${esc(s.slogan)}</p>` : ""}
+              <p class="detail-location"><i class="ti ti-map-pin" style="color:var(--gold);"></i> ${esc(s.commune)}${s.quartier ? ", " + esc(s.quartier) : ""}</p>
+              <div class="detail-rating">
+                <span class="detail-stars">${etoiles(s.noteGlobale)}</span>
+                <span class="detail-note">${s.noteGlobale > 0 ? Number(s.noteGlobale).toFixed(1) : "—"}</span>
+                <span class="detail-nb-avis">(${s.nbAvis ?? avis.length} avis)</span>
+                <span style="font-size:.76rem;color:var(--txt3);">· ${s.vues || 0} vues</span>
+              </div>
+            </div>
+          </div>
+          <div class="detail-actions">
+            ${!isOwner && proprioId ? `<button class="btn btn-gold" onclick="contacter('${proprioId}','${s._id}')"><i class="ti ti-message-circle"></i> Contacter</button>` : ""}
+            ${
+              !isOwner
+                ? `<button class="btn ${estFavori ? "btn-gold" : "btn-glass"} btn-sm" id="btn-favori" data-etat="${estFavori ? "oui" : "non"}" onclick="toggleFavori('${s._id}')">
+              <i class="ti ${estFavori ? "ti-heart-filled" : "ti-heart"}"></i> ${estFavori ? "Sauvegardé" : "Favoris"}</button>`
+                : ""
+            }
+            ${isOwner ? `<a href="dashboard-salon.html" class="btn btn-gold"><i class="ti ti-edit"></i> Modifier mon salon</a>` : ""}
+            <a href="salons.html" class="btn btn-glass btn-sm"><i class="ti ti-arrow-left"></i> Retour</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="container">
+        <div class="detail-layout">
+          <div>
+            ${
+              s.description
+                ? `<div class="detail-bloc rv" style="margin-bottom:20px;">
+              <p class="detail-bloc-title"><i class="ti ti-info-circle"></i> À propos</p>
+              <p style="font-size:.9rem;color:var(--txt2);line-height:1.75;font-weight:300;">${esc(s.description)}</p>
+            </div>`
+                : ""
+            }
+
+            ${
+              services.length
+                ? `<div class="detail-bloc rv" style="margin-bottom:20px;">
+              <p class="detail-bloc-title"><i class="ti ti-list"></i> Services &amp; tarifs</p>
+              <div class="services-list">
+                ${services
+                  .map(
+                    (sv) => `<div class="service-item">
+                  <div>
+                    <p class="service-name">${esc(sv.nom)}</p>
+                    ${sv.description ? `<p class="service-desc">${esc(sv.description)}</p>` : ""}
+                    ${sv.duree ? `<p class="service-duree"><i class="ti ti-clock"></i> ${sv.duree} min</p>` : ""}
+                  </div>
+                  <p class="service-prix">${Number(sv.prix).toLocaleString("fr")} FCFA</p>
+                </div>`,
+                  )
+                  .join("")}
+              </div>
+            </div>`
+                : ""
+            }
+
+            ${
+              s.galerie?.length
+                ? `<div class="detail-bloc rv" style="margin-bottom:20px;">
+              <p class="detail-bloc-title"><i class="ti ti-photo"></i> Galerie</p>
+              <div class="galerie-grid">
+                ${s.galerie
+                  .map((item, i) => {
+                    const src =
+                      item && typeof item === "object" ? item.url : item;
+                    return src
+                      ? `<div class="galerie-img"><img src="${esc(src)}" alt="Photo ${i + 1}" loading="lazy"></div>`
+                      : "";
+                  })
+                  .join("")}
+              </div>
+            </div>`
+                : ""
+            }
+
+            <div class="detail-bloc rv">
+              <p class="detail-bloc-title"><i class="ti ti-star"></i> Avis clients</p>
+              <div class="avis-list" id="avis-liste">
+                ${avis.length ? avis.map(renderAvis).join("") : '<p style="color:var(--txt3);font-size:.88rem;">Aucun avis pour l\'instant. Soyez le premier !</p>'}
+              </div>
+              ${
+                isClient
+                  ? `<div class="avis-form" style="margin-top:20px;">
+                <p class="avis-form-title">Laisser un avis</p>
+                <div class="star-picker" role="radiogroup" aria-label="Note">
+                  ${[1, 2, 3, 4, 5].map((n) => `<button class="star-btn" onclick="setNote(${n})" aria-label="${n} étoile${n > 1 ? "s" : ""}">★</button>`).join("")}
+                </div>
+                <textarea id="avis-commentaire" class="form-input" placeholder="Partagez votre expérience..." style="margin-bottom:12px;min-height:80px;"></textarea>
+                <button class="btn btn-gold btn-sm" onclick="soumettreAvis()"><i class="ti ti-send"></i> Publier</button>
+              </div>`
+                  : ""
+              }
+              ${!connecte ? `<p style="font-size:.82rem;color:var(--txt3);margin-top:14px;"><a href="auth.html?mode=connexion" style="color:var(--gold);">Connectez-vous</a> pour laisser un avis.</p>` : ""}
+            </div>
+          </div>
+
+          <div>
+            <div class="detail-bloc rv" style="margin-bottom:16px;">
+              <p class="detail-bloc-title"><i class="ti ti-address-book"></i> Contact</p>
+              <div class="contact-list">
+                ${s.telephone ? `<div class="contact-item"><i class="ti ti-phone"></i><a href="tel:${esc(s.telephone)}">${esc(s.telephone)}</a></div>` : ""}
+                ${s.whatsapp ? `<div class="contact-item"><i class="ti ti-brand-whatsapp"></i><a href="https://wa.me/${String(s.whatsapp).replace(/\D/g, "")}" target="_blank" rel="noopener">WhatsApp</a></div>` : ""}
+                ${s.email ? `<div class="contact-item"><i class="ti ti-mail"></i><a href="mailto:${esc(s.email)}">${esc(s.email)}</a></div>` : ""}
+                ${s.instagram ? `<div class="contact-item"><i class="ti ti-brand-instagram"></i><a href="https://instagram.com/${encodeURIComponent(String(s.instagram).replace("@", ""))}" target="_blank" rel="noopener">${esc(s.instagram)}</a></div>` : ""}
+                ${s.adresse ? `<div class="contact-item"><i class="ti ti-map-pin"></i><span>${esc(s.adresse)}</span></div>` : ""}
+                ${!s.telephone && !s.whatsapp && !s.email && !s.instagram && !s.adresse ? '<p style="color:var(--txt3);font-size:.84rem;">Aucune information de contact.</p>' : ""}
+              </div>
+            </div>
+
+            <div class="detail-bloc rv">
+              <p class="detail-bloc-title"><i class="ti ti-clock"></i> Horaires</p>
+              <div class="horaires-list">${renderHoraire(s)}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:32px 0;position:relative;z-index:1;border-top:1px solid var(--bd);margin-top:20px;">
+        <div class="container">
+          <div class="footer-bottom">
+            <p class="footer-bottom-left">© 2025 Salon Finder</p>
+            <a href="salons.html" class="btn btn-glass btn-sm"><i class="ti ti-arrow-left"></i> Tous les salons</a>
+          </div>
+        </div>
+      </div>`;
+
+          document.querySelectorAll(".rv").forEach((el) => {
+            if (typeof rvObs !== "undefined") rvObs.observe(el);
+            else el.classList.add("visible");
+          });
+        } catch (err) {
+          console.error("Salon :", err);
+          document.getElementById("page-content").innerHTML = `
+      <div style="text-align:center;padding:160px 24px;">
+        <i class="ti ti-scissors" style="font-size:4rem;color:var(--txt3);display:block;margin-bottom:20px;"></i>
+        <h2 style="font-family:var(--font-display);font-size:2.5rem;font-style:italic;color:var(--white);margin-bottom:10px;">Salon introuvable</h2>
+        <p style="color:var(--txt2);margin-bottom:24px;">${esc(err.message)}</p>
+        <a href="salons.html" class="btn btn-gold"><i class="ti ti-arrow-left"></i> Retour</a>
+      </div>`;
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", chargerSalon);
+    </script>
+  </body>
+</html>

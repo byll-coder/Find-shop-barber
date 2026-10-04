@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+  <head>
+    <script>
+      (function () {
+        try {
+          var requis = "client"; // "salon" dans dashboard-salon.html ; null dans messages.html
+          var t = localStorage.getItem("sf_v2_token");
+          var u = JSON.parse(localStorage.getItem("sf_v2_user") || "null");
+          var ok = !!t;
+          if (ok) {
+            try {
+              // token expiré = déconnecté
+              var p = JSON.parse(
+                atob(t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")),
+              );
+              if (p.exp && p.exp * 1000 < Date.now()) ok = false;
+            } catch (e) {}
+          }
+          if (!ok) {
+            localStorage.removeItem("sf_v2_token");
+            localStorage.removeItem("sf_v2_user");
+            location.replace("auth.html");
+          } else if (requis && u && u.role && u.role !== requis) {
+            location.replace("../index.html");
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Messages — Salon Finder</title>
+    <link rel="icon" type="image/png" href="../logo/logo-salonfinder.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"
+    />
+    <link rel="stylesheet" href="../css/styles.css" />
+    <link rel="stylesheet" href="../css/animations.css" />
+    <link rel="stylesheet" href="../css/message.css" />
+
+    <style>
+      body {
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="grain" aria-hidden="true"></div>
+    <div class="toast" id="global-toast" role="status" aria-live="polite"></div>
+
+    <nav class="navbar" role="navigation">
+      <a href="../index.html" class="navbar-logo"
+        ><span class="navbar-logo-dot"></span> Salon<em>·</em>Finder</a
+      >
+      <ul class="navbar-links">
+        <li><a href="../index.html">Accueil</a></li>
+        <li><a href="salons.html">Salons</a></li>
+        <li><a href="messages.html" class="active">Messages</a></li>
+      </ul>
+      <div class="navbar-right">
+        <button class="btn-theme" id="theme-btn">
+          <i class="ti ti-moon"></i>
+        </button>
+        <div class="navbar-auth" id="navbar-auth"></div>
+        <button
+          class="hamburger"
+          id="hamburger"
+          aria-label="Menu"
+          aria-expanded="false"
+          aria-controls="mobile-menu"
+        >
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </nav>
+    <div class="mobile-menu" id="mobile-menu">
+      <a href="../index.html"><i class="ti ti-home"></i> Accueil</a>
+      <a href="salons.html"><i class="ti ti-scissors"></i> Salons</a>
+      <a href="messages.html" class="active"
+        ><i class="ti ti-message-circle"></i> Messages</a
+      >
+      <div class="mobile-menu-sep"></div>
+      <div class="mobile-menu-btns" id="mobile-auth"></div>
+    </div>
+
+    <!-- Layout 2 colonnes -->
+    <div class="msg-layout">
+      <!-- SIDEBAR CONVERSATIONS -->
+      <aside class="conv-sidebar">
+        <div class="conv-sidebar-header">
+          <p class="conv-sidebar-title">Messages</p>
+          <div class="conv-search">
+            <i class="ti ti-search"></i>
+            <input
+              type="text"
+              id="search-conv"
+              placeholder="Rechercher..."
+              oninput="filtrerConvs()"
+              aria-label="Rechercher une conversation"
+            />
+          </div>
+        </div>
+        <div class="conv-list" id="conv-list">
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              height: 100px;
+            "
+          >
+            <div class="spinner spinner-sm"></div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- ZONE CHAT -->
+      <div class="chat-zone" id="chat-zone">
+        <div class="chat-empty" id="chat-empty">
+          <i class="ti ti-message-circle-2"></i>
+          <h3>Vos messages</h3>
+          <p>Sélectionnez une conversation<br />ou contactez un salon.</p>
+          <a href="salons.html" class="btn btn-gold" style="margin-top: 20px"
+            ><i class="ti ti-scissors"></i> Voir les salons</a
+          >
+        </div>
+      </div>
+    </div>
+
+    <!-- Socket.IO CDN -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="../js/theme.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/main.js"></script>
+    <script src="../js/socket.js"></script>
+    <script>
+      let toutesConvs = [];
+      let convActuelle = null;
+
+      /* ── Helpers ── */
+      // apiFetch renvoie déjà json.data : on accepte [..] ou {data:[..]}
+      const enListe = (res) =>
+        Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
+      const enObjet = (res) =>
+        res?.data && !Array.isArray(res.data) ? res.data : res;
+      const esc = (s) =>
+        String(s ?? "").replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[c],
+        );
+      const idDe = (x) => (x && typeof x === "object" ? x._id : x);
+
+      function dateCourtMsg(iso) {
+        if (!iso) return "";
+        const d = new Date(iso),
+          diff = (new Date() - d) / 1000;
+        if (diff < 60) return "À l'instant";
+        if (diff < 3600) return `${Math.floor(diff / 60)} min`;
+        if (diff < 86400)
+          return d.toLocaleTimeString("fr-FR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+        return d.toLocaleDateString("fr-FR", {
+          day: "numeric",
+          month: "short",
+        });
+      }
+
+      /* ── Liste des conversations ── */
+      function renderConvs(convs) {
+        const el = document.getElementById("conv-list");
+        const user = Session.getUser() || {};
+        convs = Array.isArray(convs) ? convs : [];
+        if (!convs.length) {
+          el.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--txt3);"><i class="ti ti-message-off" style="font-size:2rem;display:block;margin-bottom:10px;"></i><p style="font-size:.84rem;">Aucune conversation.</p></div>`;
+          return;
+        }
+        el.innerHTML = convs
+          .map((c) => {
+            const autre =
+              c.participants?.find((p) => idDe(p) !== user._id) ||
+              c.participants?.[0];
+            const nonLus = c.nonLus
+              ? c.nonLus[user._id] || c.nonLus.get?.(user._id) || 0
+              : 0;
+            const lastMsg =
+              c.dernierMessage?.contenu || "Démarrer la conversation…";
+            const init = (autre?.nom || "?")[0].toUpperCase();
+            return `<div class="conv-item ${c._id === convActuelle ? "active" : ""}" data-id="${c._id}" onclick="ouvrirConv('${c._id}')">
+          <div class="conv-av">${autre?.avatar ? `<img src="${esc(autre.avatar)}" alt="">` : init}</div>
+          <div class="conv-info">
+            <p class="conv-name">${esc(autre?.nom || "Utilisateur")}</p>
+            <p class="conv-last">${esc(lastMsg.substring(0, 40))}${lastMsg.length > 40 ? "…" : ""}</p>
+          </div>
+          <div class="conv-meta">
+            <span class="conv-time">${dateCourtMsg(c.dernierMessageAt)}</span>
+            ${nonLus > 0 ? `<span class="conv-unread">${nonLus > 9 ? "9+" : nonLus}</span>` : ""}
+          </div>
+        </div>`;
+          })
+          .join("");
+      }
+
+      function filtrerConvs() {
+        const q = document.getElementById("search-conv").value.toLowerCase();
+        const user = Session.getUser() || {};
+        renderConvs(
+          toutesConvs.filter((c) => {
+            const autre = c.participants?.find((p) => idDe(p) !== user._id);
+            return (autre?.nom || "").toLowerCase().includes(q);
+          }),
+        );
+      }
+
+      /* ── Charger les conversations
+        depuisURL = true UNIQUEMENT au premier chargement (sinon boucle infinie) ── */
+      async function chargerConvs(depuisURL = false) {
+        try {
+          toutesConvs = enListe(await Messages.conversations());
+          renderConvs(toutesConvs);
+          if (depuisURL) {
+            const convParam = new URLSearchParams(window.location.search).get(
+              "conv",
+            );
+            if (convParam) ouvrirConv(convParam);
+          }
+        } catch (err) {
+          console.error("Conversations :", err);
+          document.getElementById("conv-list").innerHTML = `
+        <div style="text-align:center;padding:40px 20px;color:var(--txt3);">
+          <p style="font-size:.84rem;">${esc(err.message || "Erreur de chargement")}</p>
+          <button class="btn btn-gold btn-sm" style="margin-top:12px" onclick="chargerConvs(true)">Réessayer</button>
+        </div>`;
+          afficherToast(err.message, "error");
+        }
+      }
+
+      /* ── Message ── */
+      function renderMsg(msg, isMine) {
+        const init = (msg.expediteur?.nom || "?")[0].toUpperCase();
+        return `<div class="msg-group ${isMine ? "mine" : ""}">
+      ${!isMine ? `<div class="msg-ava">${msg.expediteur?.avatar ? `<img src="${esc(msg.expediteur.avatar)}" alt="">` : init}</div>` : ""}
+      <div>
+        <div class="msg-bubble">${esc(msg.contenu)}</div>
+        <p class="msg-time">${dateCourtMsg(msg.createdAt)}</p>
+      </div>
+    </div>`;
+      }
+      const estMoi = (msg) =>
+        idDe(msg.expediteur) === (Session.getUser() || {})._id;
+
+      /* ── Ouvrir une conversation ── */
+      async function ouvrirConv(convId) {
+        convActuelle = convId;
+        document
+          .querySelectorAll(".conv-item")
+          .forEach((el) =>
+            el.classList.toggle("active", el.dataset.id === convId),
+          );
+        try {
+          Socket.joinConv(convId);
+        } catch (e) {
+          console.warn("Socket indisponible :", e);
+        }
+
+        try {
+          const msgs = enListe(await Messages.getMessages(convId));
+          const conv = toutesConvs.find((c) => c._id === convId);
+          const user = Session.getUser() || {};
+          const autre =
+            conv?.participants?.find((p) => idDe(p) !== user._id) ||
+            conv?.participants?.[0];
+          const initA = (autre?.nom || "?")[0].toUpperCase();
+
+          document.getElementById("chat-zone").innerHTML = `
+        <div class="chat-header">
+          <div class="conv-av" style="flex-shrink:0;">${autre?.avatar ? `<img src="${esc(autre.avatar)}" alt="">` : initA}</div>
+          <div style="flex:1;">
+            <p class="chat-header-name">${esc(autre?.nom || "Utilisateur")}</p>
+            <p class="chat-header-status" id="user-status"><span class="online-dot"></span> En ligne</p>
+          </div>
+          ${conv?.salon ? `<a href="salon-detail.html?id=${idDe(conv.salon)}" class="btn btn-glass btn-sm"><i class="ti ti-scissors"></i> Voir le salon</a>` : ""}
+        </div>
+
+        <div class="chat-messages" id="chat-messages">
+          ${
+            msgs.length
+              ? msgs.map((m) => renderMsg(m, estMoi(m))).join("")
+              : `<div style="text-align:center;padding:40px;color:var(--txt3);"><i class="ti ti-message-circle" style="font-size:2rem;display:block;margin-bottom:8px;"></i><p style="font-size:.84rem;">Début de la conversation</p></div>`
+          }
+          <div id="typing-wrap" style="display:none;">
+            <div class="msg-group">
+              <div class="conv-av" style="width:28px;height:28px;">${initA}</div>
+              <div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="chat-input-zone">
+          <div class="chat-input-row">
+            <input type="text" id="msg-input" placeholder="Écrivez un message…"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();envoyerMsg();}"
+              oninput="try{Socket.startTyping('${convId}')}catch(e){}"/>
+            <button class="btn-send" id="btn-send" onclick="envoyerMsg()"><i class="ti ti-send"></i></button>
+          </div>
+        </div>`;
+
+          scrollBas();
+          document.getElementById("msg-input")?.focus();
+          chargerConvs(); // rafraîchit les non-lus, SANS rouvrir la conversation
+        } catch (err) {
+          console.error("Messages :", err);
+          afficherToast(err.message, "error");
+        }
+      }
+
+      /* ── Envoyer ── */
+      async function envoyerMsg() {
+        if (!convActuelle) return;
+        const input = document.getElementById("msg-input");
+        const contenu = input?.value.trim();
+        if (!contenu) return;
+        input.value = "";
+        let sent = false;
+        try {
+          sent = Socket.sendMessage(convActuelle, contenu);
+        } catch (e) {}
+        if (!sent) {
+          try {
+            const res = await Messages.envoyer(convActuelle, { contenu });
+            appendMsg(enObjet(res), true);
+            scrollBas();
+            chargerConvs();
+          } catch (err) {
+            afficherToast(err.message, "error");
+            input.value = contenu;
+          }
+        }
+      }
+
+      function appendMsg(msg, isMine) {
+        const container = document.getElementById("chat-messages");
+        const typing = document.getElementById("typing-wrap");
+        if (!container) return;
+        const el = document.createElement("div");
+        el.innerHTML = renderMsg(msg, isMine);
+        container.insertBefore(el.firstElementChild, typing);
+      }
+
+      function scrollBas() {
+        const el = document.getElementById("chat-messages");
+        if (el) el.scrollTop = el.scrollHeight;
+      }
+
+      /* ── Événements socket ── */
+      function initSocketEvents() {
+        Socket.on("message:receive", (msg) => {
+          if (idDe(msg.conversation) === convActuelle) {
+            appendMsg(msg, estMoi(msg)); // mon propre message renvoyé par le serveur reste à droite
+            scrollBas();
+          }
+          chargerConvs();
+        });
+        Socket.on("typing:start", ({ userId }) => {
+          if (userId !== (Session.getUser() || {})._id)
+            document
+              .getElementById("typing-wrap")
+              ?.style.setProperty("display", "block");
+        });
+        Socket.on("typing:stop", () => {
+          document
+            .getElementById("typing-wrap")
+            ?.style.setProperty("display", "none");
+        });
+        Socket.on("user:offline", () => {
+          const statusEl = document.getElementById("user-status");
+          if (statusEl)
+            statusEl.innerHTML =
+              '<i class="ti ti-clock" style="font-size:.7rem;"></i> Hors ligne';
+        });
+      }
+
+      /* ── Init ── */
+      document.addEventListener("DOMContentLoaded", () => {
+        if (!protegerPage()) return;
+        majNavbar();
+        try {
+          Socket.connect();
+          initSocketEvents();
+        } catch (e) {
+          console.warn("Socket non initialisé :", e); // les messages marchent quand même en HTTP
+        }
+        chargerConvs(true);
+      });
+    </script>
+  </body>
+</html>

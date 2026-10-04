@@ -1,0 +1,1301 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+  <head>
+         <script>
+  (function () {
+    try {
+      var requis = "client"; // "salon" dans dashboard-salon.html ; null dans messages.html
+      var t = localStorage.getItem("sf_v2_token");
+      var u = JSON.parse(localStorage.getItem("sf_v2_user") || "null");
+      var ok = !!t;
+      if (ok) {
+        try { // token expiré = déconnecté
+          var p = JSON.parse(atob(t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+          if (p.exp && p.exp * 1000 < Date.now()) ok = false;
+        } catch (e) {}
+      }
+      if (!ok) {
+        localStorage.removeItem("sf_v2_token");
+        localStorage.removeItem("sf_v2_user");
+        location.replace("auth.html");
+      } else if (requis && u && u.role && u.role !== requis) {
+        location.replace("../index.html");
+      }
+    } catch (e) {}
+  })();
+</script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Espace Pro — Salon Finder</title>
+    <link rel="icon" type="image/png" href="../logo/logo-salonfinder.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"
+    />
+    <link rel="stylesheet" href="../css/animations.css" />
+    <link rel="stylesheet" href="../css/styles.css" />
+    <link rel="stylesheet" href="../css/dashboard.css" />
+    <head>
+
+    <style>
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--font-ui);
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 5px 14px;
+        border-radius: var(--r-pill);
+      }
+      .status-publie {
+        background: rgba(0, 196, 140, 0.1);
+        border: 1px solid rgba(0, 196, 140, 0.3);
+        color: var(--success);
+      }
+      .status-attente {
+        background: rgba(255, 176, 32, 0.1);
+        border: 1px solid rgba(255, 176, 32, 0.3);
+        color: var(--warning);
+      }
+      .form-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+      @media (min-width: 640px) {
+        .form-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      .service-item-admin {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 14px 16px;
+        background: var(--bg3);
+        border: 1px solid var(--bd);
+        border-radius: var(--r);
+        margin-bottom: 8px;
+        transition: border-color var(--t);
+      }
+      .service-item-admin:hover {
+        border-color: rgba(201, 169, 110, 0.2);
+      }
+      .service-item-admin:last-child {
+        margin-bottom: 0;
+      }
+      .rdv-item-pro {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 14px 16px;
+        background: var(--glass);
+        border: 1px solid var(--bd);
+        border-radius: var(--r);
+        margin-bottom: 8px;
+        transition: border-color var(--t);
+      }
+      .rdv-item-pro:hover {
+        border-color: rgba(201, 169, 110, 0.2);
+      }
+      .avis-item-pro {
+        display: flex;
+        gap: 14px;
+        padding: 16px;
+        background: var(--bg3);
+        border: 1px solid var(--bd);
+        border-radius: var(--r);
+        margin-bottom: 8px;
+      }
+      .avis-ava-pro {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        flex-shrink: 0;
+        background: var(--gold-pale);
+        border: 1px solid rgba(201, 169, 110, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-display);
+        font-style: italic;
+        color: var(--gold);
+        overflow: hidden;
+      }
+      .avis-ava-pro img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .s-pending {
+        background: rgba(255, 176, 32, 0.1);
+        color: var(--warning);
+        border: 1px solid rgba(255, 176, 32, 0.3);
+      }
+      .s-confirmed {
+        background: rgba(0, 196, 140, 0.1);
+        color: var(--success);
+        border: 1px solid rgba(0, 196, 140, 0.3);
+      }
+      .s-other {
+        background: var(--glass);
+        color: var(--txt2);
+        border: 1px solid var(--bd);
+      }
+      .upload-zone {
+        display: block;
+        border: 2px dashed var(--bd2);
+        border-radius: var(--r);
+        padding: 32px 20px;
+        text-align: center;
+        cursor: pointer;
+        transition:
+          border-color var(--t),
+          background var(--t);
+      }
+      .upload-zone:hover {
+        border-color: var(--gold);
+        background: var(--gold-pale);
+      }
+      .upload-zone i {
+        font-size: 2.2rem;
+        color: var(--txt3);
+        display: block;
+        margin-bottom: 10px;
+        transition: color var(--t);
+      }
+      .upload-zone:hover i {
+        color: var(--gold);
+      }
+      .galerie-admin-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-top: 16px;
+      }
+      .galerie-admin-item {
+        position: relative;
+        aspect-ratio: 1;
+        border-radius: var(--r-sm);
+        overflow: hidden;
+        background: var(--bg3);
+      }
+      .galerie-admin-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform var(--t);
+      }
+      .galerie-admin-item:hover img {
+        transform: scale(1.04);
+      }
+      .galerie-admin-del {
+        position: absolute;
+        top: 7px;
+        right: 7px;
+        width: 30px;
+        height: 30px;
+        background: rgba(9, 9, 15, 0.85);
+        border: 1px solid var(--bd);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--error);
+        cursor: pointer;
+        font-size: 0.82rem;
+        transition: background var(--t);
+      }
+      .galerie-admin-del:hover {
+        background: rgba(255, 77, 106, 0.25);
+      }
+      @media (min-width: 640px) {
+        .galerie-admin-grid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="ambient-bg" aria-hidden="true">
+      <div class="ambient-orb ambient-orb--1"></div>
+      <div class="ambient-orb ambient-orb--2"></div>
+    </div>
+    <div class="grain" aria-hidden="true"></div>
+    <div class="toast" id="global-toast" role="status" aria-live="polite"></div>
+
+    <nav class="navbar" role="navigation">
+      <a href="../index.html" class="navbar-logo"
+        ><span class="navbar-logo-dot"></span> Salon<em>·</em>Finder</a
+      >
+      <ul class="navbar-links">
+        <li><a href="../index.html">Accueil</a></li>
+        <li><a href="salons.html">Salons</a></li>
+      </ul>
+      <div class="navbar-right">
+        <button class="btn-theme" id="theme-btn">
+          <i class="ti ti-moon"></i>
+        </button>
+        <div class="navbar-auth" id="navbar-auth"></div>
+        <button
+          class="hamburger"
+          id="hamburger"
+          aria-label="Menu"
+          aria-expanded="false"
+          aria-controls="mobile-menu"
+        >
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </nav>
+    <div class="mobile-menu" id="mobile-menu">
+      <a href="../index.html"><i class="ti ti-home"></i> Accueil</a>
+      <a href="salons.html"><i class="ti ti-scissors"></i> Salons</a>
+      <div class="mobile-menu-sep"></div>
+      <div class="mobile-menu-btns" id="mobile-auth"></div>
+    </div>
+
+    <div class="dash-layout">
+      <!-- SIDEBAR (barre du bas sur mobile) -->
+      <aside class="dash-sidebar">
+        <div class="dash-user-bloc">
+          <div class="dash-avatar" id="dash-avatar">?</div>
+          <p class="dash-user-name" id="dash-nom">Chargement…</p>
+          <span class="dash-user-role"><i class="ti ti-scissors"></i> Pro</span>
+        </div>
+        <nav class="dash-nav">
+          <button
+            class="dash-nav-btn active"
+            onclick="afficherSection('accueil')"
+          >
+            <i class="ti ti-layout-dashboard"></i> Dashboard
+          </button>
+          <button class="dash-nav-btn" onclick="afficherSection('salon')">
+            <i class="ti ti-building-store"></i> Mon salon
+          </button>
+          <button class="dash-nav-btn" onclick="afficherSection('services')">
+            <i class="ti ti-list-check"></i> Services
+          </button>
+          <button class="dash-nav-btn" onclick="afficherSection('horaires')">
+            <i class="ti ti-clock"></i> Horaires
+          </button>
+          <button class="dash-nav-btn" onclick="afficherSection('photos')">
+            <i class="ti ti-photo"></i> Photos
+          </button>
+          <button
+            class="dash-nav-btn"
+            onclick="window.location.href = 'messages.html'"
+          >
+            <i class="ti ti-message-circle"></i> Messages
+          </button>
+          <button class="dash-nav-btn" onclick="afficherSection('rdv')">
+            <i class="ti ti-calendar"></i> Rendez-vous
+          </button>
+          <button class="dash-nav-btn" onclick="afficherSection('avis')">
+            <i class="ti ti-star"></i> Avis
+          </button>
+          <div class="dash-nav-sep"></div>
+          <button class="dash-nav-btn" onclick="voirProfil()">
+            <i class="ti ti-eye"></i> Voir mon profil
+          </button>
+          <div class="dash-nav-sep"></div>
+          <button class="dash-nav-btn danger" onclick="deconnexion()">
+            <i class="ti ti-logout"></i> Déconnexion
+          </button>
+        </nav>
+      </aside>
+
+      <main class="dash-main">
+        <!-- ACCUEIL -->
+        <div id="section-accueil" class="dash-section active">
+          <h1 class="dash-page-title">Dashboard</h1>
+          <p class="dash-page-sub">Vue d'ensemble de votre activité.</p>
+          <div class="stats-row">
+            <div class="stat-card">
+              <div class="stat-ico"><i class="ti ti-eye"></i></div>
+              <p class="stat-num" id="s-vues">—</p>
+              <p class="stat-lbl">Vues</p>
+            </div>
+            <div class="stat-card">
+              <div class="stat-ico"><i class="ti ti-message-circle"></i></div>
+              <p class="stat-num" id="s-msgs">—</p>
+              <p class="stat-lbl">Messages</p>
+            </div>
+            <div class="stat-card">
+              <div class="stat-ico"><i class="ti ti-star"></i></div>
+              <p class="stat-num" id="s-note">—</p>
+              <p class="stat-lbl">Note</p>
+            </div>
+            <div class="stat-card">
+              <div class="stat-ico"><i class="ti ti-heart"></i></div>
+              <p class="stat-num" id="s-fav">—</p>
+              <p class="stat-lbl">Favoris</p>
+            </div>
+          </div>
+          <div class="dash-bloc">
+            <p class="dash-bloc-title">
+              <i class="ti ti-building-store"></i> Statut de votre salon
+            </p>
+            <div id="statut-salon">
+              <div class="spinner spinner-sm" style="margin: 16px auto"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MON SALON -->
+        <div id="section-salon" class="dash-section">
+          <h1 class="dash-page-title">Mon salon</h1>
+          <p class="dash-page-sub">Informations visibles par les clients.</p>
+          <div id="al-salon" class="alert alert-error"></div>
+          <div id="al-salon-ok" class="alert alert-success"></div>
+
+          <div class="dash-bloc" style="margin-bottom: 16px">
+            <p class="dash-bloc-title">
+              <i class="ti ti-info-circle"></i> Identité
+            </p>
+            <div class="form-grid">
+              <div class="form-group" style="grid-column: 1/-1">
+                <label class="form-label">Nom du salon *</label
+                ><input
+                  type="text"
+                  id="i-nom"
+                  class="form-input"
+                  placeholder="Ex : Studio Beauté Élite"
+                />
+              </div>
+              <div class="form-group" style="grid-column: 1/-1">
+                <label class="form-label">Slogan</label
+                ><input
+                  type="text"
+                  id="i-slogan"
+                  class="form-input"
+                  placeholder="Votre tagline…"
+                />
+              </div>
+              <div class="form-group" style="grid-column: 1/-1">
+                <label class="form-label">Description</label
+                ><textarea
+                  id="i-desc"
+                  class="form-input"
+                  rows="4"
+                  placeholder="Décrivez votre salon, votre ambiance, vos spécialités…"
+                ></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Catégorie</label>
+                <select id="i-cat" class="form-input">
+                  <option value="mixte">Mixte</option>
+                  <option value="femme">Femme</option>
+                  <option value="homme">Homme</option>
+                  <option value="barbier">Barbier</option>
+                  <option value="enfant">Enfant</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Commune *</label
+                ><input
+                  type="text"
+                  id="i-commune"
+                  class="form-input"
+                  placeholder="Ex : Cocody"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Quartier</label
+                ><input
+                  type="text"
+                  id="i-quartier"
+                  class="form-input"
+                  placeholder="Ex : Riviera 3"
+                />
+              </div>
+              <div class="form-group" style="grid-column: 1/-1">
+                <label class="form-label">Adresse</label
+                ><input
+                  type="text"
+                  id="i-adresse"
+                  class="form-input"
+                  placeholder="Ex : Rue des Jardins, face à l'école"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="dash-bloc" style="margin-bottom: 16px">
+            <p class="dash-bloc-title">
+              <i class="ti ti-address-book"></i> Contact
+            </p>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Téléphone</label
+                ><input
+                  type="tel"
+                  id="i-tel"
+                  class="form-input"
+                  placeholder="+225 07 00 00 00 00"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">WhatsApp</label
+                ><input
+                  type="tel"
+                  id="i-wa"
+                  class="form-input"
+                  placeholder="+225 07 00 00 00 00"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email</label
+                ><input
+                  type="email"
+                  id="i-email"
+                  class="form-input"
+                  placeholder="contact@salon.ci"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Instagram</label
+                ><input
+                  type="text"
+                  id="i-insta"
+                  class="form-input"
+                  placeholder="@maboutique"
+                />
+              </div>
+            </div>
+          </div>
+
+          <button
+            class="btn btn-gold"
+            id="btn-save-salon"
+            onclick="sauvegarderSalon()"
+          >
+            <i class="ti ti-device-floppy"></i> Sauvegarder les modifications
+          </button>
+        </div>
+
+        <!-- SERVICES -->
+        <div id="section-services" class="dash-section">
+          <h1 class="dash-page-title">Services</h1>
+          <p class="dash-page-sub">Gérez vos prestations et tarifs.</p>
+
+          <div class="dash-bloc" style="margin-bottom: 16px">
+            <p class="dash-bloc-title">
+              <i class="ti ti-plus"></i> Ajouter un service
+            </p>
+            <div id="al-service" class="alert alert-error"></div>
+            <div class="form-grid">
+              <div class="form-group" style="grid-column: 1/-1">
+                <label class="form-label">Nom du service *</label
+                ><input
+                  type="text"
+                  id="sv-nom"
+                  class="form-input"
+                  placeholder="Ex : Coupe + brushing"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Prix (FCFA) *</label
+                ><input
+                  type="number"
+                  id="sv-prix"
+                  class="form-input"
+                  min="0"
+                  placeholder="5000"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Durée (min)</label
+                ><input
+                  type="number"
+                  id="sv-duree"
+                  class="form-input"
+                  value="30"
+                  min="5"
+                />
+              </div>
+              <div class="form-group" style="grid-column: 1/-1">
+                <label class="form-label"
+                  >Description
+                  <span style="color: var(--txt3); font-weight: 300"
+                    >(optionnel)</span
+                  ></label
+                ><input
+                  type="text"
+                  id="sv-desc"
+                  class="form-input"
+                  placeholder="Détails supplémentaires…"
+                />
+              </div>
+            </div>
+            <button
+              class="btn btn-gold btn-sm"
+              id="btn-add-service"
+              style="margin-top: 4px"
+              onclick="ajouterService()"
+            >
+              <i class="ti ti-plus"></i> Ajouter ce service
+            </button>
+          </div>
+
+          <div class="dash-bloc">
+            <p class="dash-bloc-title">
+              <i class="ti ti-list-check"></i> Liste des services
+            </p>
+            <div id="services-list">
+              <div class="spinner spinner-sm" style="margin: 20px auto"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- HORAIRES -->
+        <div id="section-horaires" class="dash-section">
+          <h1 class="dash-page-title">Horaires</h1>
+          <p class="dash-page-sub">
+            Vos heures d'ouverture affichées aux clients.
+          </p>
+          <div id="al-horaires" class="alert alert-error"></div>
+          <div id="al-horaires-ok" class="alert alert-success"></div>
+          <div class="dash-bloc">
+            <p class="dash-bloc-title">
+              <i class="ti ti-clock"></i> Planning de la semaine
+            </p>
+            <div id="horaires-editor"></div>
+          </div>
+          <button
+            class="btn btn-gold"
+            style="margin-top: 16px"
+            onclick="sauvegarderHoraires()"
+          >
+            <i class="ti ti-device-floppy"></i> Sauvegarder les horaires
+          </button>
+        </div>
+
+        <!-- PHOTOS -->
+        <div id="section-photos" class="dash-section">
+          <h1 class="dash-page-title">Photos</h1>
+          <p class="dash-page-sub">Photo de couverture, logo et galerie.</p>
+
+          <div class="dash-bloc" style="margin-bottom: 16px">
+            <p class="dash-bloc-title">
+              <i class="ti ti-photo"></i> Photo de couverture
+            </p>
+            <label class="upload-zone" for="up-cover">
+              <i class="ti ti-cloud-upload"></i>
+              <p
+                style="font-weight: 600; color: var(--txt2); margin-bottom: 4px"
+              >
+                Cliquer pour uploader
+              </p>
+              <p style="font-size: 0.78rem; color: var(--txt3)">
+                JPG, PNG ou WEBP — max 5 Mo
+              </p>
+            </label>
+            <input
+              type="file"
+              id="up-cover"
+              accept="image/*"
+              style="display: none"
+              onchange="uploadPhoto(this, 'cover')"
+            />
+            <div id="preview-cover" style="margin-top: 14px; display: none">
+              <img
+                style="
+                  max-height: 200px;
+                  border-radius: var(--r);
+                  object-fit: cover;
+                  width: 100%;
+                "
+                id="img-cover"
+                alt="Couverture"
+              />
+            </div>
+          </div>
+
+          <div class="dash-bloc" style="margin-bottom: 16px">
+            <p class="dash-bloc-title">
+              <i class="ti ti-brand-abstract"></i> Logo
+            </p>
+            <label class="upload-zone" for="up-logo">
+              <i class="ti ti-cloud-upload"></i>
+              <p
+                style="font-weight: 600; color: var(--txt2); margin-bottom: 4px"
+              >
+                Uploader votre logo
+              </p>
+              <p style="font-size: 0.78rem; color: var(--txt3)">
+                Format carré recommandé — max 5 Mo
+              </p>
+            </label>
+            <input
+              type="file"
+              id="up-logo"
+              accept="image/*"
+              style="display: none"
+              onchange="uploadPhoto(this, 'logo')"
+            />
+            <div id="preview-logo" style="margin-top: 14px; display: none">
+              <img
+                style="
+                  width: 100px;
+                  height: 100px;
+                  border-radius: var(--r-sm);
+                  object-fit: cover;
+                  border: 1px solid var(--bd);
+                "
+                id="img-logo"
+                alt="Logo"
+              />
+            </div>
+          </div>
+
+          <div class="dash-bloc">
+            <p class="dash-bloc-title">
+              <i class="ti ti-layout-grid"></i> Galerie photos
+            </p>
+            <label class="upload-zone" for="up-gallery">
+              <i class="ti ti-photo-plus"></i>
+              <p
+                style="font-weight: 600; color: var(--txt2); margin-bottom: 4px"
+              >
+                Ajouter des photos
+              </p>
+              <p style="font-size: 0.78rem; color: var(--txt3)">
+                Sélection multiple possible — max 5 Mo chacune
+              </p>
+            </label>
+            <input
+              type="file"
+              id="up-gallery"
+              accept="image/*"
+              multiple
+              style="display: none"
+              onchange="uploadGallery(this)"
+            />
+            <div class="galerie-admin-grid" id="galerie-grid"></div>
+          </div>
+        </div>
+
+        <!-- RENDEZ-VOUS -->
+        <div id="section-rdv" class="dash-section">
+          <h1 class="dash-page-title">Rendez-vous</h1>
+          <p class="dash-page-sub">Gérez les demandes de vos clients.</p>
+          <div id="rdv-pro-list">
+            <div class="spinner" style="margin: 40px auto"></div>
+          </div>
+        </div>
+
+        <!-- AVIS -->
+        <div id="section-avis" class="dash-section">
+          <h1 class="dash-page-title">Avis clients</h1>
+          <p class="dash-page-sub">Les retours de vos clients.</p>
+          <div id="avis-pro-list">
+            <div class="spinner" style="margin: 40px auto"></div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script src="../js/theme.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/main.js"></script>
+    <script>
+      const JOURS = [
+        "lundi",
+        "mardi",
+        "mercredi",
+        "jeudi",
+        "vendredi",
+        "samedi",
+        "dimanche",
+      ];
+      const STATUTS = {
+        pending: "En attente",
+        confirmed: "Confirmé",
+        cancelled: "Annulé",
+        completed: "Terminé",
+        rejected: "Refusé",
+      };
+      const MAX_PHOTO = 5 * 1024 * 1024; // 5 Mo
+      let monSalon = null;
+
+      /* ── Helpers ──
+     apiFetch renvoie déjà json.data : on accepte aussi {salon:{…}} / {data:[…]} */
+      const $ = (id) => document.getElementById(id);
+      const setTxt = (id, v) => {
+        const el = $(id);
+        if (el) el.textContent = v;
+      };
+      const esc = (s) =>
+        String(s ?? "").replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[c],
+        );
+      const enListe = (r, cle) =>
+        Array.isArray(r)
+          ? r
+          : Array.isArray(r?.data)
+            ? r.data
+            : cle && Array.isArray(r?.[cle])
+              ? r[cle]
+              : [];
+      const normaliserSalon = (r) => r?.salon || r?.data?.salon || r?.data || r;
+      const salonId = () => monSalon?._id || monSalon?.id;
+      const stars = (n) => {
+        const k = Math.max(0, Math.min(5, Math.round(n || 0)));
+        return "★".repeat(k) + "☆".repeat(5 - k);
+      };
+      const dateFr = (d, opts) => {
+        const x = new Date(d);
+        return isNaN(x) ? "" : x.toLocaleDateString("fr-FR", opts);
+      };
+      const estErreur401 = (err) =>
+        /401|token|non autorisé/i.test(err?.message || "");
+      const estErreur404 = (err) =>
+        /(^|\D)404(\D|$)|introuvable|non trouvé/i.test(err?.message || "");
+
+      function afficherSection(nom) {
+        document
+          .querySelectorAll(".dash-section")
+          .forEach((s) => s.classList.remove("active"));
+        document
+          .querySelectorAll(".dash-nav-btn")
+          .forEach((b) => b.classList.remove("active"));
+        $("section-" + nom)?.classList.add("active");
+        document
+          .querySelector(`.dash-nav-btn[onclick="afficherSection('${nom}')"]`)
+          ?.classList.add("active");
+        if (nom === "rdv") chargerRDV();
+        if (nom === "avis") chargerAvis();
+        document.querySelector(".dash-nav-btn.active")?.scrollIntoView({
+          inline: "center",
+          block: "nearest",
+          behavior: "smooth",
+        });
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      function voirProfil() {
+        if (salonId())
+          window.open(`salon-detail.html?id=${salonId()}`, "_blank");
+        else afficherToast("Créez d'abord votre salon", "error");
+      }
+
+      /* ══ CHARGER LE SALON ══ */
+      function afficherSalon(s) {
+        setTxt("s-vues", s.vues || 0);
+        setTxt(
+          "s-note",
+          s.noteGlobale > 0 ? Number(s.noteGlobale).toFixed(1) : "—",
+        );
+        setTxt("s-fav", s.nbFavoris || 0);
+        $("statut-salon").innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        ${
+          s.isPublie
+            ? '<span class="status-badge status-publie"><i class="ti ti-circle-check"></i> Salon publié et visible</span>'
+            : '<span class="status-badge status-attente"><i class="ti ti-clock"></i> En attente de validation</span>'
+        }
+        <p style="font-size:.86rem;color:var(--txt2);">${esc(s.nom)} · ${esc(s.commune)}</p>
+        <a href="salon-detail.html?id=${s._id}" class="btn btn-glass btn-sm" style="align-self:flex-start;" target="_blank"><i class="ti ti-eye"></i> Voir le profil public</a>
+      </div>`;
+        remplirFormSalon(s);
+        remplirHoraires(s.horaires || {});
+        remplirGalerie(s.galerie || []);
+        if (s.photoCouverture) {
+          $("img-cover").src = s.photoCouverture;
+          $("preview-cover").style.display = "block";
+        }
+        if (s.logo) {
+          $("img-logo").src = s.logo;
+          $("preview-logo").style.display = "block";
+        }
+      }
+
+      function afficherAucunSalon() {
+        $("statut-salon").innerHTML =
+          `<div class="dash-empty" style="background:none;border:none;padding:10px 0;">
+      <i class="ti ti-building-store"></i><h3>Aucun salon créé</h3>
+      <p>Cliquez sur « Mon salon » pour créer votre fiche.</p></div>`;
+        remplirHoraires({});
+        $("services-list").innerHTML =
+          '<p style="color:var(--txt3);font-size:.84rem;padding:8px 0;">Créez d\'abord votre salon pour ajouter des services.</p>';
+      }
+
+      async function chargerSalon() {
+        try {
+          const res = await Auth.moi();
+          const u = res?.user || res;
+          const nom = u?.nom || "Professionnel";
+          setTxt("dash-nom", nom);
+          setTxt("dash-avatar", nom[0].toUpperCase());
+
+          let s = null;
+          try {
+            s = normaliserSalon(await Salons.monSalon());
+            if (!s || !(s._id || s.id)) s = null;
+          } catch (err) {
+            if (estErreur401(err)) throw err;
+            if (!estErreur404(err)) {
+              // vraie erreur (réseau, serveur…) : on ne fait PAS croire que le salon n'existe pas
+              console.error("Mon salon :", err);
+              $("statut-salon").innerHTML =
+                `<p style="color:var(--error);margin-bottom:12px;">${esc(err.message)}</p>
+            <button class="btn btn-glass btn-sm" onclick="chargerSalon()"><i class="ti ti-refresh"></i> Réessayer</button>`;
+              majNavbar();
+              return;
+            }
+          }
+
+          monSalon = s;
+          if (s) {
+            afficherSalon(s);
+            chargerServices();
+          } else {
+            afficherAucunSalon();
+          }
+          majNavbar();
+        } catch (err) {
+          if (estErreur401(err)) {
+            Session.clear();
+            window.location.href = _chemin("/pages/auth.html");
+          } else {
+            console.error("Erreur chargement salon :", err);
+            setTxt("dash-nom", "Erreur de chargement");
+          }
+        }
+      }
+
+      /* ══ FORMULAIRE SALON ══ */
+      function remplirFormSalon(s) {
+        const set = (id, v) => {
+          const el = $(id);
+          if (el) el.value = v || "";
+        };
+        set("i-nom", s.nom);
+        set("i-slogan", s.slogan);
+        set("i-desc", s.description);
+        set("i-cat", s.categorie || "mixte");
+        set("i-commune", s.commune);
+        set("i-quartier", s.quartier);
+        set("i-adresse", s.adresse);
+        set("i-tel", s.telephone);
+        set("i-wa", s.whatsapp);
+        set("i-email", s.email);
+        set("i-insta", s.instagram);
+      }
+
+      async function sauvegarderSalon() {
+        const al = $("al-salon"),
+          ok = $("al-salon-ok"),
+          btn = $("btn-save-salon");
+        al.classList.remove("show");
+        ok.classList.remove("show");
+        const v = (id) => $(id).value.trim();
+        const payload = {
+          nom: v("i-nom"),
+          slogan: v("i-slogan"),
+          description: v("i-desc"),
+          categorie: $("i-cat").value,
+          commune: v("i-commune"),
+          quartier: v("i-quartier"),
+          adresse: v("i-adresse"),
+          telephone: v("i-tel"),
+          whatsapp: v("i-wa"),
+          email: v("i-email"),
+          instagram: v("i-insta"),
+        };
+        if (!payload.nom || !payload.commune) {
+          al.innerHTML =
+            '<i class="ti ti-alert-circle"></i> Nom et commune obligatoires.';
+          al.classList.add("show");
+          return;
+        }
+        btn.disabled = true;
+        try {
+          if (salonId()) await Salons.modifier(salonId(), payload);
+          else await Salons.creer(payload);
+          ok.innerHTML =
+            '<i class="ti ti-circle-check"></i> Salon sauvegardé avec succès !';
+          ok.classList.add("show");
+          afficherToast("Sauvegardé !", "success");
+          await chargerSalon(); // recharge depuis le serveur : id, statut, formulaire à jour
+        } catch (err) {
+          al.innerHTML = `<i class="ti ti-alert-circle"></i> ${esc(err.message)}`;
+          al.classList.add("show");
+        } finally {
+          btn.disabled = false;
+        }
+      }
+
+      /* ══ SERVICES ══ */
+      async function chargerServices() {
+        const el = $("services-list");
+        if (!salonId()) return;
+        try {
+          const data = enListe(await Services.liste(salonId()), "services");
+          if (!data.length) {
+            el.innerHTML =
+              '<p style="color:var(--txt3);font-size:.84rem;padding:8px 0;">Aucun service ajouté. Commencez par en créer un ci-dessus.</p>';
+            return;
+          }
+          el.innerHTML = data
+            .map(
+              (sv) => `
+        <div class="service-item-admin">
+          <div style="flex:1;min-width:0;">
+            <p style="font-weight:600;font-size:.92rem;color:var(--white);">${esc(sv.nom)}</p>
+            ${sv.description ? `<p style="font-size:.78rem;color:var(--txt2);margin-top:2px;">${esc(sv.description)}</p>` : ""}
+            <p style="font-size:.72rem;color:var(--txt3);margin-top:4px;display:flex;align-items:center;gap:4px;"><i class="ti ti-clock"></i> ${sv.duree || 30} min</p>
+          </div>
+          <p style="font-family:var(--font-ui);font-weight:700;font-size:.96rem;color:var(--gold);white-space:nowrap;">${Number(sv.prix).toLocaleString("fr")} F</p>
+          <button class="btn btn-glass btn-sm" data-del="${esc(sv._id)}" title="Supprimer"><i class="ti ti-trash" style="color:var(--error);"></i></button>
+        </div>`,
+            )
+            .join("");
+        } catch (err) {
+          el.innerHTML = `<p style="color:var(--error);">${esc(err.message)}</p>`;
+        }
+      }
+
+      async function ajouterService() {
+        if (!salonId())
+          return afficherToast("Créez d'abord votre salon.", "error");
+        const al = $("al-service"),
+          btn = $("btn-add-service");
+        al.classList.remove("show");
+        const nom = $("sv-nom").value.trim();
+        const prix = $("sv-prix").value;
+        if (!nom || prix === "" || Number(prix) < 0) {
+          al.innerHTML =
+            '<i class="ti ti-alert-circle"></i> Nom et prix requis.';
+          al.classList.add("show");
+          return;
+        }
+        btn.disabled = true;
+        try {
+          await Services.creer({
+            nom,
+            prix: Number(prix),
+            duree: Number($("sv-duree").value) || 30,
+            description: $("sv-desc").value.trim(),
+            salon: salonId(),
+            salonId: salonId(),
+          });
+          ["sv-nom", "sv-prix", "sv-desc"].forEach((id) => ($(id).value = ""));
+          $("sv-duree").value = "30";
+          afficherToast("Service ajouté !", "success");
+          chargerServices();
+        } catch (err) {
+          al.innerHTML = `<i class="ti ti-alert-circle"></i> ${esc(err.message)}`;
+          al.classList.add("show");
+        } finally {
+          btn.disabled = false;
+        }
+      }
+
+      async function supprimerService(id, btn) {
+        if (!confirm("Supprimer ce service ?")) return;
+        btn.disabled = true;
+        try {
+          await Services.supprimer(id);
+          afficherToast("Service supprimé.", "success");
+          chargerServices();
+        } catch (err) {
+          btn.disabled = false;
+          afficherToast(err.message, "error");
+        }
+      }
+
+      document.addEventListener("click", (e) => {
+        const b = e.target.closest("[data-del]");
+        if (b) supprimerService(b.dataset.del, b);
+        const p = e.target.closest("[data-pid]");
+        if (p) supprimerPhoto(p.dataset.pid, p);
+      });
+
+      /* ══ HORAIRES ══ */
+      function remplirHoraires(h) {
+        $("horaires-editor").innerHTML = JOURS.map((j) => {
+          const d = h[j] || { ouvert: false, debut: "08:00", fin: "18:00" };
+          return `<div class="horaire-row">
+        <p class="horaire-jour">${j}</p>
+        <div class="horaire-fields">
+          <label><input type="checkbox" id="h-${j}-ouvert" ${d.ouvert ? "checked" : ""} onchange="toggleHoraire('${j}')"> Ouvert</label>
+          <span id="h-${j}-champs" style="${d.ouvert ? "display:flex" : "display:none"};align-items:center;gap:8px;">
+            <input type="time" class="time-input" id="h-${j}-debut" value="${d.debut || "08:00"}">
+            <span style="color:var(--txt3);">–</span>
+            <input type="time" class="time-input" id="h-${j}-fin" value="${d.fin || "18:00"}">
+          </span>
+        </div>
+      </div>`;
+        }).join("");
+      }
+
+      function toggleHoraire(j) {
+        $(`h-${j}-champs`).style.display = $(`h-${j}-ouvert`).checked
+          ? "flex"
+          : "none";
+      }
+
+      async function sauvegarderHoraires() {
+        if (!salonId())
+          return afficherToast("Créez d'abord votre salon.", "error");
+        const al = $("al-horaires"),
+          ok = $("al-horaires-ok");
+        al.classList.remove("show");
+        ok.classList.remove("show");
+        const horaires = {};
+        for (const j of JOURS) {
+          const h = {
+            ouvert: $(`h-${j}-ouvert`).checked,
+            debut: $(`h-${j}-debut`)?.value || "08:00",
+            fin: $(`h-${j}-fin`)?.value || "18:00",
+          };
+          if (h.ouvert && h.fin <= h.debut) {
+            al.innerHTML = `<i class="ti ti-alert-circle"></i> ${j} : l'heure de fermeture doit être après l'ouverture.`;
+            al.classList.add("show");
+            return;
+          }
+          horaires[j] = h;
+        }
+        try {
+          await Salons.modifier(salonId(), { horaires });
+          ok.innerHTML =
+            '<i class="ti ti-circle-check"></i> Horaires sauvegardés !';
+          ok.classList.add("show");
+        } catch (err) {
+          al.innerHTML = `<i class="ti ti-alert-circle"></i> ${esc(err.message)}`;
+          al.classList.add("show");
+        }
+      }
+
+      /* ══ PHOTOS ══ */
+      function fichierValide(file) {
+        if (!file.type.startsWith("image/")) {
+          afficherToast(`${file.name} n'est pas une image.`, "error");
+          return false;
+        }
+        if (file.size > MAX_PHOTO) {
+          afficherToast(`${file.name} dépasse 5 Mo.`, "error");
+          return false;
+        }
+        return true;
+      }
+
+      async function uploadPhoto(input, type) {
+        if (!salonId()) {
+          input.value = "";
+          return afficherToast("Créez d'abord votre salon.", "error");
+        }
+        const file = input.files[0];
+        if (!file || !fichierValide(file)) {
+          input.value = "";
+          return;
+        }
+        afficherToast("Upload en cours…", "info");
+        try {
+          const data = await Media.upload(file, type);
+          afficherToast("Photo mise à jour !", "success");
+          if (type === "cover") {
+            $("img-cover").src = data.url;
+            $("preview-cover").style.display = "block";
+          }
+          if (type === "logo") {
+            $("img-logo").src = data.url;
+            $("preview-logo").style.display = "block";
+          }
+        } catch (err) {
+          afficherToast(err.message, "error");
+        } finally {
+          input.value = ""; // permet de re-choisir le même fichier
+        }
+      }
+
+      async function uploadGallery(input) {
+        if (!salonId()) {
+          input.value = "";
+          return afficherToast("Créez d'abord votre salon.", "error");
+        }
+        for (const file of input.files) {
+          if (!fichierValide(file)) continue;
+          try {
+            const data = await Media.upload(file, "gallery");
+            ajouterImgGalerie(data.url, data.publicId);
+          } catch (err) {
+            afficherToast(`Erreur : ${err.message}`, "error");
+          }
+        }
+        input.value = "";
+      }
+
+      function ajouterImgGalerie(url, publicId) {
+        const div = document.createElement("div");
+        div.className = "galerie-admin-item";
+        const img = document.createElement("img");
+        img.src = url;
+        img.alt = "Photo galerie";
+        const btn = document.createElement("button");
+        btn.className = "galerie-admin-del";
+        btn.title = "Supprimer";
+        btn.dataset.pid = publicId || "";
+        btn.innerHTML = '<i class="ti ti-trash"></i>';
+        div.append(img, btn);
+        $("galerie-grid").appendChild(div);
+      }
+
+      function remplirGalerie(galerie) {
+        const grid = $("galerie-grid");
+        grid.innerHTML = "";
+        galerie.forEach((g) =>
+          ajouterImgGalerie(g?.url || g, g?.publicId || ""),
+        );
+      }
+
+      async function supprimerPhoto(publicId, btn) {
+        if (!publicId) return btn.closest(".galerie-admin-item")?.remove();
+        if (!confirm("Supprimer cette photo ?")) return;
+        try {
+          await Media.supprimer(publicId);
+          btn.closest(".galerie-admin-item")?.remove();
+          afficherToast("Photo supprimée.", "success");
+        } catch (err) {
+          afficherToast(err.message, "error");
+        }
+      }
+
+      /* ══ RENDEZ-VOUS ══ */
+      async function chargerRDV() {
+        const el = $("rdv-pro-list");
+        try {
+          const data = enListe(await RendezVous.liste(), "rendezVous");
+          if (!data.length) {
+            el.innerHTML =
+              '<div class="dash-empty"><i class="ti ti-calendar-off"></i><h3>Aucun rendez-vous</h3><p>Les demandes de vos clients apparaîtront ici.</p></div>';
+            return;
+          }
+          el.innerHTML = data
+            .map(
+              (r) => `
+        <div class="rdv-item-pro">
+          <div style="flex:1;min-width:0;">
+            <p style="font-weight:600;font-size:.92rem;color:var(--white);">${esc(r.client?.nom || "Client")}</p>
+            <div style="font-size:.78rem;color:var(--txt2);display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;">
+              <span><i class="ti ti-calendar"></i> ${dateFr(r.date, {})}</span>
+              <span><i class="ti ti-clock"></i> ${esc(r.heure)}</span>
+              ${r.service ? `<span><i class="ti ti-scissors"></i> ${esc(r.service.nom)}</span>` : ""}
+              ${r.message ? `<span style="color:var(--txt3);"><i class="ti ti-quote"></i> ${esc(String(r.message).substring(0, 40))}</span>` : ""}
+            </div>
+          </div>
+          <span style="font-family:var(--font-ui);font-size:.66rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:var(--r-pill);" class="${r.statut === "confirmed" ? "s-confirmed" : r.statut === "pending" ? "s-pending" : "s-other"}">${esc(STATUTS[r.statut] || r.statut)}</span>
+          ${
+            r.statut === "pending"
+              ? `
+          <div style="display:flex;gap:6px;flex-shrink:0;">
+            <button class="btn btn-gold btn-sm" onclick="modifierStatutRDV('${r._id}','confirmed',this)" title="Confirmer"><i class="ti ti-check"></i></button>
+            <button class="btn btn-glass btn-sm" onclick="modifierStatutRDV('${r._id}','rejected',this)" title="Refuser"><i class="ti ti-x" style="color:var(--error);"></i></button>
+          </div>`
+              : ""
+          }
+        </div>`,
+            )
+            .join("");
+        } catch (err) {
+          el.innerHTML = `<p style="color:var(--error);">${esc(err.message)}</p>`;
+        }
+      }
+
+      async function modifierStatutRDV(id, statut, btn) {
+        const boutons = btn.parentElement.querySelectorAll("button");
+        boutons.forEach((b) => (b.disabled = true)); // évite le double clic
+        try {
+          await RendezVous.modifier(id, { statut });
+          afficherToast(
+            statut === "confirmed" ? "Confirmé !" : "Refusé.",
+            "success",
+          );
+          chargerRDV();
+        } catch (err) {
+          boutons.forEach((b) => (b.disabled = false));
+          afficherToast(err.message, "error");
+        }
+      }
+
+      /* ══ AVIS ══ */
+      async function chargerAvis() {
+        const el = $("avis-pro-list");
+        const id = salonId();
+        if (!id) {
+          el.innerHTML =
+            '<div class="dash-empty"><i class="ti ti-building-store"></i><h3>Aucun salon</h3><p>Créez d\'abord votre salon dans « Mon salon ».</p></div>';
+          return;
+        }
+        el.innerHTML = '<div class="spinner" style="margin:40px auto"></div>';
+        try {
+          const data = enListe(await Avis.liste(id), "avis");
+          if (!data.length) {
+            el.innerHTML =
+              '<div class="dash-empty"><i class="ti ti-star-off"></i><h3>Aucun avis</h3><p>Les avis de vos clients apparaîtront ici.</p></div>';
+            return;
+          }
+          el.innerHTML = data
+            .map(
+              (a) => `
+        <div class="avis-item-pro">
+          <div class="avis-ava-pro">${a.auteur?.avatar ? `<img src="${esc(a.auteur.avatar)}" alt="">` : (a.auteur?.nom || "?")[0].toUpperCase()}</div>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+              <span style="font-weight:600;font-size:.9rem;color:var(--white);">${esc(a.auteur?.nom || "Client")}</span>
+              <span style="font-size:.7rem;color:var(--txt3);">${dateFr(a.createdAt, { day: "numeric", month: "long", year: "numeric" })}</span>
+            </div>
+            <p style="color:var(--gold);font-size:.86rem;margin:4px 0;">${stars(a.note)}</p>
+            ${a.commentaire ? `<p style="font-size:.84rem;color:var(--txt2);line-height:1.65;font-weight:300;">${esc(a.commentaire)}</p>` : ""}
+          </div>
+        </div>`,
+            )
+            .join("");
+        } catch (err) {
+          console.error("Avis :", err, "salonId =", id);
+          el.innerHTML = `<p style="color:var(--error);">${esc(err.message)}</p>`;
+        }
+      }
+
+      /* ══ COMPTEUR MESSAGES ══ */
+      async function chargerMsgs() {
+        try {
+          setTxt(
+            "s-msgs",
+            enListe(await Messages.conversations(), "conversations").length,
+          );
+        } catch (err) {
+          console.error("Messages :", err);
+          setTxt("s-msgs", "0");
+        }
+      }
+
+      /* ══ INIT ══ */
+      document.addEventListener("DOMContentLoaded", async () => {
+        if (!protegerPage("salon")) return;
+        await chargerSalon();
+        chargerMsgs();
+      });
+    </script>
+  </body>
+</html>

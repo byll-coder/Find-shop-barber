@@ -1,0 +1,725 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+  <head>
+    <script>
+      /* Garde de connexion : s'exécute AVANT tout affichage (pas de flash du dashboard) */
+      (function () {
+        try {
+          var requis = "client"; // page réservée aux clients
+          var t = localStorage.getItem("sf_v2_token");
+          var u = JSON.parse(localStorage.getItem("sf_v2_user") || "null");
+          var ok = !!t;
+          if (ok) {
+            try {
+              // un token expiré = déconnecté
+              var p = JSON.parse(
+                atob(t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")),
+              );
+              if (p.exp && p.exp * 1000 < Date.now()) ok = false;
+            } catch (e) {}
+          }
+          if (!ok) {
+            localStorage.removeItem("sf_v2_token");
+            localStorage.removeItem("sf_v2_user");
+            location.replace("auth.html");
+          } else if (requis && u && u.role && u.role !== requis) {
+            location.replace("../index.html");
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mon espace — Salon Finder</title>
+    <link rel="icon" type="image/png" href="../logo/logo-salonfinder.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"
+    />
+    <link rel="stylesheet" href="../css/animations.css" />
+    <link rel="stylesheet" href="../css/styles.css" />
+    <link rel="stylesheet" href="../css/dashboard.css" />
+    <style>
+      /* La page reste masquée jusqu'à la vérification de connexion (évite le flash), puis .pret l'affiche */
+      body {
+        opacity: 0;
+        transition: opacity 0.25s ease;
+      }
+      body.pret {
+        opacity: 1;
+      }
+      .fav-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+      .fav-card {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        background: var(--glass);
+        border: 1px solid var(--bd);
+        border-radius: var(--r);
+        padding: 14px;
+        transition: border-color var(--t);
+        cursor: pointer;
+      }
+      .fav-card:hover {
+        border-color: rgba(201, 169, 110, 0.3);
+      }
+      .fav-cover {
+        width: 60px;
+        height: 60px;
+        border-radius: var(--r-sm);
+        background: var(--bg3);
+        flex-shrink: 0;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .fav-cover img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .fav-nom {
+        font-weight: 600;
+        font-size: 0.92rem;
+        color: var(--white);
+        margin-bottom: 3px;
+      }
+      .fav-loc {
+        font-size: 0.78rem;
+        color: var(--txt2);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .fav-stars {
+        color: var(--gold);
+        font-size: 0.76rem;
+      }
+      .rdv-item {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        background: var(--glass);
+        border: 1px solid var(--bd);
+        border-radius: var(--r);
+        padding: 14px;
+        margin-bottom: 10px;
+      }
+      .rdv-date {
+        text-align: center;
+        background: var(--gold-pale);
+        border: 1px solid rgba(201, 169, 110, 0.2);
+        border-radius: var(--r-sm);
+        padding: 8px 14px;
+        flex-shrink: 0;
+      }
+      .rdv-date-jour {
+        font-family: var(--font-display);
+        font-size: 1.6rem;
+        font-style: italic;
+        color: var(--gold);
+        line-height: 1;
+      }
+      .rdv-date-mois {
+        font-family: var(--font-ui);
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--gold);
+      }
+      .rdv-nom {
+        font-weight: 600;
+        font-size: 0.92rem;
+        color: var(--white);
+        margin-bottom: 3px;
+      }
+      .rdv-info {
+        font-size: 0.78rem;
+        color: var(--txt2);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .rdv-statut {
+        font-family: var(--font-ui);
+        font-size: 0.64rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 2px 8px;
+        border-radius: var(--r-pill);
+      }
+      .s-pending {
+        background: rgba(255, 176, 32, 0.1);
+        border: 1px solid rgba(255, 176, 32, 0.3);
+        color: var(--warning);
+      }
+      .s-confirmed {
+        background: rgba(0, 196, 140, 0.1);
+        border: 1px solid rgba(0, 196, 140, 0.3);
+        color: var(--success);
+      }
+      .s-cancelled,
+      .s-rejected {
+        background: rgba(255, 77, 106, 0.1);
+        border: 1px solid rgba(255, 77, 106, 0.3);
+        color: var(--error);
+      }
+      .s-completed {
+        background: rgba(201, 169, 110, 0.1);
+        border: 1px solid rgba(201, 169, 110, 0.3);
+        color: var(--gold);
+      }
+      @media (min-width: 640px) {
+        .fav-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+    </style>
+    <noscript
+      ><style>
+        body {
+          opacity: 1;
+        }
+      </style></noscript
+    >
+  </head>
+  <body>
+    <div class="ambient-bg" aria-hidden="true">
+      <div class="ambient-orb ambient-orb--1"></div>
+      <div class="ambient-orb ambient-orb--2"></div>
+    </div>
+    <div class="grain" aria-hidden="true"></div>
+    <div class="toast" id="global-toast" role="status" aria-live="polite"></div>
+
+    <nav class="navbar" role="navigation">
+      <a href="../index.html" class="navbar-logo"
+        ><span class="navbar-logo-dot"></span> Salon<em>·</em>Finder</a
+      >
+      <ul class="navbar-links">
+        <li><a href="../index.html">Accueil</a></li>
+        <li><a href="salons.html">Salons</a></li>
+      </ul>
+      <div class="navbar-right">
+        <button class="btn-theme" id="theme-btn">
+          <i class="ti ti-moon"></i>
+        </button>
+        <div class="navbar-auth" id="navbar-auth"></div>
+        <button
+          class="hamburger"
+          id="hamburger"
+          aria-label="Menu"
+          aria-expanded="false"
+          aria-controls="mobile-menu"
+        >
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </nav>
+    <div class="mobile-menu" id="mobile-menu">
+      <a href="../index.html"><i class="ti ti-home"></i> Accueil</a>
+      <a href="salons.html"><i class="ti ti-scissors"></i> Salons</a>
+      <div class="mobile-menu-sep"></div>
+      <div class="mobile-menu-btns" id="mobile-auth"></div>
+    </div>
+
+    <div class="dash-layout">
+      <!-- SIDEBAR (barre du bas sur mobile) -->
+      <aside class="dash-sidebar">
+        <div class="dash-user-bloc">
+          <div class="dash-avatar" id="dash-avatar">?</div>
+          <p class="dash-user-name" id="dash-nom">Chargement…</p>
+          <span class="dash-user-role"><i class="ti ti-user"></i> Client</span>
+        </div>
+        <nav class="dash-nav">
+          <button
+            class="dash-nav-btn active"
+            onclick="afficherSection('accueil')"
+          >
+            <i class="ti ti-layout-dashboard"></i> Dashboard
+          </button>
+          <button class="dash-nav-btn" onclick="afficherSection('favoris')">
+            <i class="ti ti-heart"></i> Mes favoris
+          </button>
+          <button class="dash-nav-btn" onclick="afficherSection('rdv')">
+            <i class="ti ti-calendar"></i> Rendez-vous
+          </button>
+          <button
+            class="dash-nav-btn"
+            onclick="window.location.href = 'messages.html'"
+          >
+            <i class="ti ti-message-circle"></i> Messages
+          </button>
+          <button class="dash-nav-btn" onclick="afficherSection('profil')">
+            <i class="ti ti-user-circle"></i> Mon profil
+          </button>
+          <div class="dash-nav-sep"></div>
+          <button
+            class="dash-nav-btn"
+            onclick="window.location.href = 'salons.html'"
+          >
+            <i class="ti ti-search"></i> Explorer
+          </button>
+          <div class="dash-nav-sep"></div>
+          <button class="dash-nav-btn danger" onclick="deconnexion()">
+            <i class="ti ti-logout"></i> Déconnexion
+          </button>
+        </nav>
+      </aside>
+
+      <main class="dash-main">
+        <!-- ACCUEIL -->
+        <div id="section-accueil" class="dash-section active">
+          <h1 class="dash-page-title">Bonjour, <span id="prenom">—</span></h1>
+          <p class="dash-page-sub">Votre espace personnel Salon Finder.</p>
+          <div class="stats-row">
+            <div class="stat-card">
+              <div class="stat-ico"><i class="ti ti-heart"></i></div>
+              <p class="stat-num" id="s-favoris">—</p>
+              <p class="stat-lbl">Favoris</p>
+            </div>
+            <div class="stat-card">
+              <div class="stat-ico"><i class="ti ti-calendar"></i></div>
+              <p class="stat-num" id="s-rdv">—</p>
+              <p class="stat-lbl">Rendez-vous</p>
+            </div>
+            <div class="stat-card">
+              <div class="stat-ico"><i class="ti ti-message-circle"></i></div>
+              <p class="stat-num" id="s-msgs">—</p>
+              <p class="stat-lbl">Messages</p>
+            </div>
+            <div class="stat-card">
+              <div class="stat-ico"><i class="ti ti-scissors"></i></div>
+              <p class="stat-num" id="s-salons">—</p>
+              <p class="stat-lbl">Salons dispo</p>
+            </div>
+          </div>
+          <div class="dash-bloc">
+            <p class="dash-bloc-title">
+              <i class="ti ti-heart"></i> Derniers favoris
+            </p>
+            <div id="apercu-fav">
+              <div class="spinner spinner-sm" style="margin: 20px auto"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FAVORIS -->
+        <div id="section-favoris" class="dash-section">
+          <h1 class="dash-page-title">Mes favoris</h1>
+          <p class="dash-page-sub">Vos salons sauvegardés.</p>
+          <div class="fav-grid" id="fav-grid"><div class="spinner"></div></div>
+        </div>
+
+        <!-- RENDEZ-VOUS -->
+        <div id="section-rdv" class="dash-section">
+          <h1 class="dash-page-title">Rendez-vous</h1>
+          <p class="dash-page-sub">Vos demandes et réservations.</p>
+          <div id="rdv-list"><div class="spinner"></div></div>
+        </div>
+
+        <!-- PROFIL -->
+        <div id="section-profil" class="dash-section">
+          <h1 class="dash-page-title">Mon profil</h1>
+          <p class="dash-page-sub">Vos informations personnelles.</p>
+          <div class="dash-bloc" style="max-width: 520px">
+            <div id="al-profil" class="alert alert-error"></div>
+            <div id="al-profil-ok" class="alert alert-success"></div>
+            <div class="form-group">
+              <label class="form-label">Nom complet</label
+              ><input type="text" id="p-nom" class="form-input" />
+            </div>
+            <div class="form-group">
+              <label class="form-label"
+                >Email
+                <span style="color: var(--txt3); font-weight: 300"
+                  >(non modifiable)</span
+                ></label
+              ><input
+                type="email"
+                id="p-email"
+                class="form-input"
+                disabled
+                style="opacity: 0.5"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Téléphone</label
+              ><input type="tel" id="p-tel" class="form-input" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Commune</label
+              ><input type="text" id="p-commune" class="form-input" />
+            </div>
+            <button class="btn btn-gold" onclick="sauvegarderProfil()">
+              <i class="ti ti-device-floppy"></i> Sauvegarder
+            </button>
+
+            <div
+              style="
+                margin-top: 28px;
+                padding-top: 24px;
+                border-top: 1px solid var(--bd);
+              "
+            >
+              <p class="dash-bloc-title" style="margin-bottom: 14px">
+                <i class="ti ti-lock"></i> Mot de passe
+              </p>
+              <div id="al-pass" class="alert alert-error"></div>
+              <div id="al-pass-ok" class="alert alert-success"></div>
+              <div class="form-group">
+                <label class="form-label">Ancien mot de passe</label
+                ><input
+                  type="password"
+                  id="p-old"
+                  class="form-input"
+                  placeholder="••••••••"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Nouveau mot de passe</label
+                ><input
+                  type="password"
+                  id="p-new"
+                  class="form-input"
+                  placeholder="6 caractères minimum"
+                />
+              </div>
+              <button class="btn btn-glass" onclick="changerPass()">
+                <i class="ti ti-shield-lock"></i> Mettre à jour
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script src="../js/theme.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/main.js"></script>
+    <script>
+      const STATUTS = {
+        pending: "En attente",
+        confirmed: "Confirmé",
+        cancelled: "Annulé",
+        completed: "Terminé",
+        rejected: "Refusé",
+      };
+      const stars = (n) =>
+        "★".repeat(Math.round(n || 0)) + "☆".repeat(5 - Math.round(n || 0));
+
+      /* ── Helpers ──
+     apiFetch renvoie déjà json.data : on n'écrit plus « const { data } = await … » */
+      const esc = (s) =>
+        String(s ?? "").replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[c],
+        );
+      const enListe = (res, cle) =>
+        Array.isArray(res)
+          ? res
+          : Array.isArray(res?.data)
+            ? res.data
+            : cle && Array.isArray(res?.[cle])
+              ? res[cle]
+              : [];
+      const setTxt = (id, v) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = v;
+      };
+
+      let favoris = [];
+
+      function afficherSection(nom) {
+        document
+          .querySelectorAll(".dash-section")
+          .forEach((s) => s.classList.remove("active"));
+        document
+          .querySelectorAll(".dash-nav-btn")
+          .forEach((b) => b.classList.remove("active"));
+        document.getElementById("section-" + nom)?.classList.add("active");
+        document
+          .querySelector(`.dash-nav-btn[onclick="afficherSection('${nom}')"]`)
+          ?.classList.add("active");
+        document
+          .querySelector(".dash-nav-btn.active")
+          ?.scrollIntoView({
+            inline: "center",
+            block: "nearest",
+            behavior: "smooth",
+          });
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      /* ══ PROFIL ══ */
+      async function chargerProfil() {
+        try {
+          const res = await Auth.moi();
+          const u = res?.user || res; // accepte {…user} ou {user:{…}}
+          const nom = u.nom || "Utilisateur";
+          const prenom = nom.split(" ")[0];
+          setTxt("prenom", prenom);
+          setTxt("dash-nom", nom);
+          setTxt("dash-avatar", prenom[0].toUpperCase());
+          document.getElementById("p-nom").value = nom;
+          document.getElementById("p-email").value = u.email || "";
+          document.getElementById("p-tel").value = u.telephone || "";
+          document.getElementById("p-commune").value = u.commune || "";
+          majNavbar();
+        } catch (err) {
+          if (
+            err.message?.includes("401") ||
+            err.message?.toLowerCase().includes("token") ||
+            err.message?.toLowerCase().includes("non autorisé")
+          ) {
+            Session.clear();
+            window.location.href = _chemin("/pages/auth.html");
+          } else {
+            console.error("Erreur chargement profil:", err.message);
+            setTxt("dash-nom", "Erreur de chargement");
+          }
+        }
+      }
+
+      async function sauvegarderProfil() {
+        const al = document.getElementById("al-profil"),
+          ok = document.getElementById("al-profil-ok");
+        al.classList.remove("show");
+        ok.classList.remove("show");
+        const nom = document.getElementById("p-nom").value.trim();
+        if (!nom) {
+          al.innerHTML =
+            '<i class="ti ti-alert-circle"></i> Le nom est obligatoire.';
+          al.classList.add("show");
+          return;
+        }
+        try {
+          await Auth.modifierProfil({
+            nom,
+            telephone: document.getElementById("p-tel").value.trim(),
+            commune: document.getElementById("p-commune").value.trim(),
+          });
+          Session.setUser?.({ ...Session.getUser(), nom });
+          setTxt("dash-nom", nom);
+          setTxt("prenom", nom.split(" ")[0]);
+          setTxt("dash-avatar", nom[0].toUpperCase());
+          ok.innerHTML =
+            '<i class="ti ti-circle-check"></i> Profil mis à jour !';
+          ok.classList.add("show");
+          majNavbar();
+        } catch (err) {
+          al.innerHTML = `<i class="ti ti-alert-circle"></i> ${esc(err.message)}`;
+          al.classList.add("show");
+        }
+      }
+
+      async function changerPass() {
+        const al = document.getElementById("al-pass"),
+          ok = document.getElementById("al-pass-ok");
+        al.classList.remove("show");
+        ok.classList.remove("show");
+        const ancien = document.getElementById("p-old").value;
+        const nouveau = document.getElementById("p-new").value;
+        const erreur =
+          !ancien || !nouveau
+            ? "Les deux champs sont requis."
+            : nouveau.length < 6
+              ? "Le nouveau mot de passe doit contenir au moins 6 caractères."
+              : "";
+        if (erreur) {
+          al.innerHTML = `<i class="ti ti-alert-circle"></i> ${erreur}`;
+          al.classList.add("show");
+          return;
+        }
+        try {
+          // la méthode s'appelle changerPass dans api.js (changerPassword n'existait pas)
+          await Auth.changerPass({
+            ancienPassword: ancien,
+            nouveauPassword: nouveau,
+          });
+          ok.innerHTML =
+            '<i class="ti ti-circle-check"></i> Mot de passe mis à jour !';
+          ok.classList.add("show");
+          document.getElementById("p-old").value = "";
+          document.getElementById("p-new").value = "";
+        } catch (err) {
+          al.innerHTML = `<i class="ti ti-alert-circle"></i> ${esc(err.message)}`;
+          al.classList.add("show");
+        }
+      }
+
+      /* ══ FAVORIS (une seule requête, deux affichages) ══ */
+      const favVide = `<div class="dash-empty" style="grid-column:1/-1">
+    <i class="ti ti-heart-off"></i><h3>Aucun favori</h3>
+    <p>Explorez les salons et sauvegardez vos préférés.</p>
+    <a href="salons.html" class="btn btn-gold btn-sm" style="margin-top:14px;"><i class="ti ti-scissors"></i> Explorer</a></div>`;
+
+      function renderFavCard(s) {
+        return `<div class="fav-card" onclick="window.location.href='salon-detail.html?id=${s._id}'">
+      <div class="fav-cover">${s.photoCouverture ? `<img src="${esc(s.photoCouverture)}" alt="${esc(s.nom)}">` : `<i class="ti ti-scissors" style="color:var(--txt3);font-size:1.4rem;"></i>`}</div>
+      <div style="flex:1;min-width:0;">
+        <p class="fav-nom">${esc(s.nom)}</p>
+        <p class="fav-loc"><i class="ti ti-map-pin"></i>${esc(s.commune)}</p>
+        <p class="fav-stars">${stars(s.noteGlobale || 0)} <span style="font-family:var(--font-ui);font-size:.72rem;color:var(--txt3);">(${s.nbAvis || 0})</span></p>
+      </div>
+      <button class="btn btn-glass btn-sm" style="flex-shrink:0;" title="Retirer" onclick="event.stopPropagation();retirerFavori('${s._id}')"><i class="ti ti-heart-off"></i></button>
+    </div>`;
+      }
+
+      function renderFavoris() {
+        setTxt("s-favoris", favoris.length);
+        const apercu = document.getElementById("apercu-fav");
+        const grid = document.getElementById("fav-grid"); // c'est déjà une .fav-grid : pas de wrapper en plus
+        if (apercu)
+          apercu.innerHTML = favoris.length
+            ? `<div class="fav-grid">${favoris.slice(0, 3).map(renderFavCard).join("")}</div>`
+            : `<div class="fav-grid">${favVide}</div>`;
+        if (grid)
+          grid.innerHTML = favoris.length
+            ? favoris.map(renderFavCard).join("")
+            : favVide;
+      }
+
+      async function chargerFavoris() {
+        try {
+          // certains backends renvoient [{salon:{…}}], d'autres directement les salons
+          favoris = enListe(await Favoris.liste(), "favoris")
+            .map((f) => f.salon || f)
+            .filter((s) => s && s._id);
+          renderFavoris();
+        } catch (err) {
+          console.error("Favoris :", err);
+          const msg = `<p style="color:var(--txt2);grid-column:1/-1">${esc(err.message)}</p>`;
+          document.getElementById("apercu-fav").innerHTML = msg;
+          document.getElementById("fav-grid").innerHTML = msg;
+        }
+      }
+
+      async function retirerFavori(id) {
+        try {
+          await Favoris.toggle(id);
+          favoris = favoris.filter((s) => s._id !== id);
+          renderFavoris(); // met à jour le compteur ET les deux listes
+          afficherToast("Retiré des favoris", "success");
+        } catch (err) {
+          afficherToast(err.message, "error");
+        }
+      }
+
+      /* ══ RENDEZ-VOUS ══ */
+      async function chargerRDV() {
+        const el = document.getElementById("rdv-list");
+        try {
+          const data = enListe(await RendezVous.liste(), "rendezVous");
+          setTxt("s-rdv", data.length);
+          if (!data.length) {
+            el.innerHTML = `<div class="dash-empty"><i class="ti ti-calendar-off"></i><h3>Aucun rendez-vous</h3><p>Prenez rendez-vous en contactant un salon.</p><a href="salons.html" class="btn btn-gold btn-sm" style="margin-top:14px;"><i class="ti ti-scissors"></i> Explorer</a></div>`;
+            return;
+          }
+          el.innerHTML = data
+            .map((r) => {
+              const d = new Date(r.date);
+              const valide = !isNaN(d);
+              const jour = valide
+                ? d.toLocaleDateString("fr-FR", { day: "2-digit" })
+                : "--";
+              const mois = valide
+                ? d
+                    .toLocaleDateString("fr-FR", { month: "short" })
+                    .replace(".", "")
+                : "";
+              return `<div class="rdv-item">
+          <div class="rdv-date"><p class="rdv-date-jour">${jour}</p><p class="rdv-date-mois">${mois}</p></div>
+          <div style="flex:1;min-width:0;">
+            <p class="rdv-nom">${esc(r.salon?.nom || "Salon")}</p>
+            <div class="rdv-info">
+              <span><i class="ti ti-clock"></i>${esc(r.heure)}</span>
+              ${r.service ? `<span><i class="ti ti-scissors"></i>${esc(r.service.nom)}</span>` : ""}
+              <span class="rdv-statut s-${esc(r.statut)}">${esc(STATUTS[r.statut] || r.statut)}</span>
+            </div>
+          </div>
+          ${r.statut === "pending" || r.statut === "confirmed" ? `<button class="btn btn-glass btn-sm" onclick="annulerRDV('${r._id}')"><i class="ti ti-x"></i> Annuler</button>` : ""}
+        </div>`;
+            })
+            .join("");
+        } catch (err) {
+          console.error("RDV :", err);
+          el.innerHTML = `<p style="color:var(--txt2);">${esc(err.message)}</p>`;
+        }
+      }
+
+      async function annulerRDV(id) {
+        if (!confirm("Annuler ce rendez-vous ?")) return;
+        try {
+          await RendezVous.modifier(id, { statut: "cancelled" });
+          afficherToast("Rendez-vous annulé.", "success");
+          chargerRDV();
+        } catch (err) {
+          afficherToast(err.message, "error");
+        }
+      }
+
+      /* ══ STATS ══ */
+      async function chargerMessages() {
+        try {
+          setTxt(
+            "s-msgs",
+            enListe(await Messages.conversations(), "conversations").length,
+          );
+        } catch (err) {
+          console.error("Messages :", err);
+          setTxt("s-msgs", "0");
+        }
+      }
+
+      async function chargerStatSalons() {
+        try {
+          const res = await Salons.liste({ limit: 1 });
+          // .total n'existe que si api.js conserve la pagination (voir correctif apiFetch)
+          setTxt(
+            "s-salons",
+            res?.total ?? res?.data?.total ?? enListe(res, "salons").length,
+          );
+        } catch (err) {
+          console.error("Stat salons :", err);
+        }
+      }
+
+      /* ══ INIT ══ */
+      const reveler = () => document.body.classList.add("pret");
+      setTimeout(reveler, 4000); // filet de sécurité : la page ne reste jamais invisible
+
+      document.addEventListener("DOMContentLoaded", async () => {
+        // protegerPage redirige vers la connexion si besoin ; sinon on affiche la page
+        if (!protegerPage("client")) return;
+        reveler();
+        await chargerProfil();
+        chargerFavoris();
+        chargerRDV();
+        chargerMessages();
+        chargerStatSalons();
+      });
+    </script>
+  </body>
+</html>

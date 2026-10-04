@@ -1,0 +1,1080 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+  <head>
+    <script>
+      (function () {
+        try {
+          var requis = "client"; // "salon" dans dashboard-salon.html ; null dans messages.html
+          var t = localStorage.getItem("sf_v2_token");
+          var u = JSON.parse(localStorage.getItem("sf_v2_user") || "null");
+          var ok = !!t;
+          if (ok) {
+            try {
+              // token expiré = déconnecté
+              var p = JSON.parse(
+                atob(t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")),
+              );
+              if (p.exp && p.exp * 1000 < Date.now()) ok = false;
+            } catch (e) {}
+          }
+          if (!ok) {
+            localStorage.removeItem("sf_v2_token");
+            localStorage.removeItem("sf_v2_user");
+            location.replace("auth.html");
+          } else if (requis && u && u.role && u.role !== requis) {
+            location.replace("../index.html");
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Réservation — Salon Finder</title>
+    <link rel="icon" type="image/png" href="../logo/logo-salonfinder.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"
+    />
+    <link rel="stylesheet" href="../css/animations.css" />
+    <link rel="stylesheet" href="../css/styles.css" />
+    <style>
+      .rdv-page {
+        min-height: 100svh;
+        padding: 100px 0 60px;
+        position: relative;
+        z-index: 1;
+      }
+      .rdv-layout {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 24px;
+        max-width: 900px;
+        margin-inline: auto;
+      }
+      /* Récap salon */
+      .salon-recap {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        background: var(--glass);
+        border: 1px solid var(--bd);
+        border-radius: var(--r);
+        padding: 18px;
+        margin-bottom: 8px;
+      }
+      .salon-recap-cover {
+        width: 64px;
+        height: 64px;
+        border-radius: var(--r-sm);
+        background: var(--bg3);
+        flex-shrink: 0;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .salon-recap-cover img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .salon-recap-cover i {
+        font-size: 1.6rem;
+        color: var(--txt3);
+      }
+      .salon-recap-nom {
+        font-family: var(--font-display);
+        font-size: 1.2rem;
+        font-style: italic;
+        color: var(--white);
+      }
+      .salon-recap-loc {
+        font-size: 0.82rem;
+        color: var(--txt2);
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin-top: 3px;
+      }
+      .salon-recap-note {
+        font-size: 0.78rem;
+        color: var(--gold);
+        margin-top: 3px;
+      }
+      /* Étapes */
+      .steps-bar {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        margin-bottom: 32px;
+      }
+      .step-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-family: var(--font-ui);
+        font-size: 0.76rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--txt3);
+      }
+      .step-num {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        background: var(--glass);
+        border: 1px solid var(--bd);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.72rem;
+        font-weight: 700;
+        transition: all var(--t);
+      }
+      .step-item.active .step-num {
+        background: var(--gold);
+        border-color: var(--gold);
+        color: #1a1008;
+      }
+      .step-item.active {
+        color: var(--gold);
+      }
+      .step-item.done .step-num {
+        background: var(--success);
+        border-color: var(--success);
+        color: #fff;
+      }
+      .step-item.done {
+        color: var(--txt2);
+      }
+      .step-line {
+        flex: 1;
+        height: 1px;
+        background: var(--bd);
+        margin: 0 8px;
+      }
+      /* Formulaire */
+      .rdv-step {
+        display: none;
+      }
+      .rdv-step.active {
+        display: block;
+        animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+      }
+      .rdv-bloc {
+        background: var(--glass);
+        border: 1px solid var(--bd);
+        border-radius: var(--r);
+        padding: 24px;
+        margin-bottom: 16px;
+      }
+      .rdv-bloc-title {
+        font-family: var(--font-ui);
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--gold);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 18px;
+      }
+      /* Services */
+      .services-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      .service-select-card {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 14px 16px;
+        background: var(--bg3);
+        border: 1.5px solid var(--bd);
+        border-radius: var(--r-sm);
+        cursor: pointer;
+        transition: all var(--t);
+      }
+      .service-select-card:hover {
+        border-color: rgba(201, 169, 110, 0.3);
+      }
+      .service-select-card.active {
+        border-color: var(--gold);
+        background: var(--gold-pale);
+      }
+      .service-select-card input {
+        accent-color: var(--gold);
+        flex-shrink: 0;
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+      }
+      .service-select-nom {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--white);
+      }
+      .service-select-info {
+        font-size: 0.76rem;
+        color: var(--txt2);
+        margin-top: 2px;
+        display: flex;
+        gap: 10px;
+      }
+      .service-select-prix {
+        font-family: var(--font-ui);
+        font-weight: 700;
+        color: var(--gold);
+        margin-left: auto;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      /* Créneaux */
+      .creneaux-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+      .creneau-btn {
+        padding: 10px 6px;
+        text-align: center;
+        font-family: var(--font-ui);
+        font-size: 0.82rem;
+        font-weight: 600;
+        background: var(--glass);
+        border: 1px solid var(--bd);
+        border-radius: var(--r-sm);
+        cursor: pointer;
+        color: var(--txt2);
+        transition: all var(--t);
+        min-height: 44px;
+      }
+      .creneau-btn:hover {
+        border-color: rgba(201, 169, 110, 0.3);
+        color: var(--gold);
+      }
+      .creneau-btn.active {
+        background: var(--gold);
+        border-color: var(--gold);
+        color: #1a1008;
+      }
+      .creneau-btn.taken {
+        opacity: 0.3;
+        cursor: not-allowed;
+        text-decoration: line-through;
+      }
+      /* Récap */
+      .recap-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 11px 0;
+        border-bottom: 1px solid var(--bd);
+        font-size: 0.88rem;
+      }
+      .recap-row:last-child {
+        border-bottom: none;
+      }
+      .recap-label {
+        color: var(--txt2);
+      }
+      .recap-val {
+        color: var(--white);
+        font-weight: 600;
+        text-align: right;
+      }
+      .recap-total .recap-label {
+        font-family: var(--font-ui);
+        font-weight: 700;
+        color: var(--white);
+      }
+      .recap-total .recap-val {
+        font-family: var(--font-display);
+        font-size: 1.4rem;
+        font-style: italic;
+        color: var(--gold);
+      }
+      .rdv-nav {
+        display: flex;
+        gap: 10px;
+        justify-content: space-between;
+        margin-top: 20px;
+      }
+      /* Succès */
+      .success-screen {
+        text-align: center;
+        padding: 60px 24px;
+        display: none;
+        animation: scale-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+      }
+      .success-screen.show {
+        display: block;
+      }
+      .success-ico {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        background: rgba(0, 196, 140, 0.1);
+        border: 2px solid var(--success);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        font-size: 2rem;
+        color: var(--success);
+      }
+      .success-title {
+        font-family: var(--font-display);
+        font-size: 2.2rem;
+        font-style: italic;
+        color: var(--white);
+        margin-bottom: 10px;
+      }
+      .success-sub {
+        color: var(--txt2);
+        font-size: 0.9rem;
+        max-width: 40ch;
+        margin: 0 auto 28px;
+        line-height: 1.7;
+        font-weight: 300;
+      }
+      @media (min-width: 640px) {
+        .creneaux-grid {
+          grid-template-columns: repeat(4, 1fr);
+        }
+      }
+      @media (min-width: 1024px) {
+        .rdv-layout {
+          grid-template-columns: 1fr 340px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="ambient-bg" aria-hidden="true">
+      <div class="ambient-orb ambient-orb--1"></div>
+      <div class="ambient-orb ambient-orb--2"></div>
+    </div>
+    <div class="grain" aria-hidden="true"></div>
+    <div class="toast" id="global-toast" role="status" aria-live="polite"></div>
+
+    <nav class="navbar" role="navigation">
+      <a href="../index.html" class="navbar-logo"
+        ><span class="navbar-logo-dot"></span> Salon<em>·</em>Finder</a
+      >
+      <ul class="navbar-links">
+        <li><a href="../index.html">Accueil</a></li>
+        <li><a href="salons.html">Salons</a></li>
+      </ul>
+      <div class="navbar-right">
+        <button class="btn-theme" id="theme-btn">
+          <i class="ti ti-moon"></i>
+        </button>
+        <div class="navbar-auth" id="navbar-auth"></div>
+        <button
+          class="hamburger"
+          id="hamburger"
+          aria-label="Menu"
+          aria-expanded="false"
+          aria-controls="mobile-menu"
+        >
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </nav>
+    <div class="mobile-menu" id="mobile-menu">
+      <a href="../index.html"><i class="ti ti-home"></i> Accueil</a>
+      <a href="salons.html"><i class="ti ti-scissors"></i> Salons</a>
+      <div class="mobile-menu-sep"></div>
+      <div class="mobile-menu-btns" id="mobile-auth"></div>
+    </div>
+
+    <div class="rdv-page">
+      <div class="container">
+        <!-- Fil d'Ariane -->
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.78rem;
+            color: var(--txt3);
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+          "
+        >
+          <a href="salons.html" style="color: var(--txt3)">Salons</a>
+          <i class="ti ti-chevron-right" style="font-size: 0.7rem"></i>
+          <a id="bc-salon" href="salons.html" style="color: var(--txt2)"
+            >Salon</a
+          >
+          <i class="ti ti-chevron-right" style="font-size: 0.7rem"></i>
+          <span style="color: var(--white)">Réservation</span>
+        </div>
+
+        <div style="margin-bottom: 32px">
+          <p class="section-eyebrow">Prise de rendez-vous</p>
+          <h1
+            style="
+              font-family: var(--font-display);
+              font-size: clamp(2rem, 5vw, 3rem);
+              font-style: italic;
+              color: var(--white);
+              line-height: 1.1;
+            "
+          >
+            Réservez votre
+            <em style="color: var(--gold); font-style: normal">séance</em>
+          </h1>
+        </div>
+
+        <div id="page-loader" style="text-align: center; padding: 60px 0">
+          <div class="spinner"></div>
+        </div>
+
+        <div id="rdv-content" style="display: none">
+          <!-- Succès -->
+          <div class="success-screen" id="success-screen">
+            <div class="success-ico"><i class="ti ti-calendar-check"></i></div>
+            <h2 class="success-title">Demande envoyée !</h2>
+            <p class="success-sub">
+              Votre demande de rendez-vous a bien été transmise au salon. Vous
+              recevrez une confirmation dès que le salon aura accepté.
+            </p>
+            <div
+              style="
+                display: flex;
+                gap: 10px;
+                justify-content: center;
+                flex-wrap: wrap;
+              "
+            >
+              <a href="dashboard-client.html" class="btn btn-gold"
+                ><i class="ti ti-layout-dashboard"></i> Mon espace</a
+              >
+              <a id="retour-salon" href="salons.html" class="btn btn-glass"
+                ><i class="ti ti-arrow-left"></i> Retour au salon</a
+              >
+            </div>
+          </div>
+
+          <div id="rdv-form-wrapper">
+            <div class="salon-recap rv" id="salon-recap">
+              <div class="salon-recap-cover" id="salon-cover-wrap">
+                <i class="ti ti-scissors"></i>
+              </div>
+              <div>
+                <p class="salon-recap-nom" id="salon-nom-recap">—</p>
+                <p class="salon-recap-loc">
+                  <i class="ti ti-map-pin"></i
+                  ><span id="salon-loc-recap">—</span>
+                </p>
+                <p class="salon-recap-note" id="salon-note-recap"></p>
+              </div>
+              <a
+                id="salon-link-recap"
+                href="salons.html"
+                class="btn btn-glass btn-sm"
+                style="margin-left: auto; flex-shrink: 0"
+                ><i class="ti ti-eye"></i> Voir</a
+              >
+            </div>
+
+            <div class="steps-bar rv">
+              <div class="step-item active" id="step-1-item">
+                <div class="step-num">1</div>
+                <span>Service</span>
+              </div>
+              <div class="step-line"></div>
+              <div class="step-item" id="step-2-item">
+                <div class="step-num">2</div>
+                <span>Date &amp; heure</span>
+              </div>
+              <div class="step-line"></div>
+              <div class="step-item" id="step-3-item">
+                <div class="step-num">3</div>
+                <span>Confirmation</span>
+              </div>
+            </div>
+
+            <div class="rdv-layout">
+              <div>
+                <!-- Étape 1 -->
+                <div id="step-1" class="rdv-step active">
+                  <div class="rdv-bloc">
+                    <p class="rdv-bloc-title">
+                      <i class="ti ti-list-check"></i> Choisissez un service
+                    </p>
+                    <div class="services-grid" id="services-select">
+                      <div
+                        class="spinner spinner-sm"
+                        style="margin: 20px auto"
+                      ></div>
+                    </div>
+                    <div
+                      style="
+                        margin-top: 14px;
+                        padding-top: 14px;
+                        border-top: 1px solid var(--bd);
+                      "
+                    >
+                      <p
+                        style="
+                          font-size: 0.78rem;
+                          color: var(--txt3);
+                          margin-bottom: 8px;
+                          font-style: italic;
+                        "
+                      >
+                        Vous pouvez continuer sans choisir de service si vous
+                        souhaitez en discuter avec le salon.
+                      </p>
+                      <button
+                        class="btn btn-glass btn-sm"
+                        onclick="passerSansService()"
+                      >
+                        <i class="ti ti-arrow-right"></i> Continuer sans service
+                      </button>
+                    </div>
+                  </div>
+                  <div class="rdv-nav">
+                    <a
+                      href="salons.html"
+                      id="btn-retour-salon"
+                      class="btn btn-glass"
+                      ><i class="ti ti-arrow-left"></i> Retour</a
+                    >
+                    <button
+                      class="btn btn-gold"
+                      onclick="aller(2)"
+                      id="btn-step1-next"
+                      disabled
+                    >
+                      <span>Suivant</span> <i class="ti ti-arrow-right"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Étape 2 -->
+                <div id="step-2" class="rdv-step">
+                  <div class="rdv-bloc">
+                    <p class="rdv-bloc-title">
+                      <i class="ti ti-calendar"></i> Choisissez une date
+                    </p>
+                    <input
+                      type="date"
+                      id="rdv-date"
+                      class="form-input"
+                      style="max-width: 280px"
+                      onchange="chargerCreneaux()"
+                      aria-label="Date du rendez-vous"
+                    />
+                    <p
+                      style="
+                        font-size: 0.76rem;
+                        color: var(--txt3);
+                        margin-top: 8px;
+                      "
+                    >
+                      <i class="ti ti-info-circle"></i> Sélectionnez une date
+                      pour voir les créneaux disponibles.
+                    </p>
+                  </div>
+                  <div
+                    class="rdv-bloc"
+                    id="creneaux-bloc"
+                    style="display: none"
+                  >
+                    <p class="rdv-bloc-title">
+                      <i class="ti ti-clock"></i> Choisissez un créneau
+                    </p>
+                    <div class="creneaux-grid" id="creneaux-grid"></div>
+                  </div>
+                  <div class="rdv-nav">
+                    <button class="btn btn-glass" onclick="aller(1)">
+                      <i class="ti ti-arrow-left"></i> Retour
+                    </button>
+                    <button
+                      class="btn btn-gold"
+                      onclick="aller(3)"
+                      id="btn-step2-next"
+                      disabled
+                    >
+                      <span>Suivant</span> <i class="ti ti-arrow-right"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Étape 3 -->
+                <div id="step-3" class="rdv-step">
+                  <div class="rdv-bloc">
+                    <p class="rdv-bloc-title">
+                      <i class="ti ti-file-check"></i> Récapitulatif
+                    </p>
+                    <div id="recap-content"></div>
+                  </div>
+                  <div class="rdv-bloc">
+                    <p class="rdv-bloc-title">
+                      <i class="ti ti-message-circle"></i> Message pour le salon
+                      <span
+                        style="
+                          color: var(--txt3);
+                          font-weight: 300;
+                          text-transform: none;
+                          letter-spacing: 0;
+                        "
+                        >(optionnel)</span
+                      >
+                    </p>
+                    <textarea
+                      id="rdv-message"
+                      class="form-input"
+                      maxlength="500"
+                      placeholder="Ex : Je préfère un coiffeur expérimenté pour cheveux bouclés…"
+                      style="min-height: 90px"
+                    ></textarea>
+                  </div>
+                  <div id="al-rdv" class="alert alert-error"></div>
+                  <div class="rdv-nav">
+                    <button class="btn btn-glass" onclick="aller(2)">
+                      <i class="ti ti-arrow-left"></i> Retour
+                    </button>
+                    <button
+                      class="btn btn-gold btn-lg"
+                      onclick="confirmerRDV()"
+                      id="btn-confirmer"
+                    >
+                      <i class="ti ti-calendar-check"></i> Confirmer la demande
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Sidebar -->
+              <div>
+                <div class="rdv-bloc" style="position: sticky; top: 90px">
+                  <p class="rdv-bloc-title">
+                    <i class="ti ti-receipt"></i> Votre sélection
+                  </p>
+                  <div id="sidebar-recap"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer role="contentinfo" style="position: relative; z-index: 1">
+      <div class="container">
+        <div class="footer-bottom">
+          <p class="footer-bottom-left">© 2025 Salon Finder</p>
+          <a href="salons.html" class="btn btn-glass btn-sm"
+            ><i class="ti ti-arrow-left"></i> Tous les salons</a
+          >
+        </div>
+      </div>
+    </footer>
+
+    <script src="../js/theme.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/main.js"></script>
+    <script>
+      /* ── Paramètres ── */
+      const params = new URLSearchParams(window.location.search);
+      const salonId = params.get("id") || params.get("salonId");
+
+      /* ── État ── */
+      let monSalon = null;
+      let servicesDispo = [];
+      let serviceChoisi = null;
+      let sansService = false;
+      let dateChoisie = null;
+      let heureChoisie = null;
+      let etape = 1;
+
+      /* ── Helpers ── */
+      const esc = (s) =>
+        String(s ?? "").replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[c],
+        );
+      const enListe = (r, cle) =>
+        Array.isArray(r)
+          ? r
+          : Array.isArray(r?.data)
+            ? r.data
+            : cle && Array.isArray(r?.[cle])
+              ? r[cle]
+              : [];
+      const $ = (id) => document.getElementById(id);
+      const fcfa = (n) => Number(n || 0).toLocaleString("fr");
+      const dateLocale = (d) =>
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const versMin = (h) => {
+        const [a, b] = String(h || "")
+          .split(":")
+          .map(Number);
+        return a * 60 + (b || 0);
+      };
+      const deMin = (m) =>
+        `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+      const JOURS = [
+        "dimanche",
+        "lundi",
+        "mardi",
+        "mercredi",
+        "jeudi",
+        "vendredi",
+        "samedi",
+      ];
+      const lienSalon = () =>
+        `salon-detail.html?id=${encodeURIComponent(salonId)}`;
+
+      /* ── Navigation entre étapes ── */
+      function aller(n) {
+        if (n === 2 && !serviceChoisi && !sansService) {
+          afficherToast(
+            "Choisissez un service ou cliquez sur « Continuer sans service »",
+            "error",
+          );
+          return;
+        }
+        if (n === 3 && (!dateChoisie || !heureChoisie)) {
+          afficherToast("Choisissez une date et un créneau", "error");
+          return;
+        }
+        etape = n;
+        document
+          .querySelectorAll(".rdv-step")
+          .forEach((s) => s.classList.remove("active"));
+        $(`step-${n}`)?.classList.add("active");
+        [1, 2, 3].forEach((i) => {
+          const item = $(`step-${i}-item`);
+          item?.classList.toggle("active", i === n);
+          item?.classList.toggle("done", i < n);
+        });
+        if (n === 2 && dateChoisie) chargerCreneaux(); // la durée du service a pu changer
+        if (n === 3) afficherRecap();
+        majSidebarRecap();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      function passerSansService() {
+        serviceChoisi = null;
+        sansService = true;
+        document
+          .querySelectorAll(".service-select-card")
+          .forEach((c) => c.classList.remove("active"));
+        document
+          .querySelectorAll(".service-select-card input")
+          .forEach((i) => (i.checked = false));
+        $("btn-step1-next").disabled = false;
+        aller(2);
+      }
+
+      /* ── Chargement du salon ── */
+      async function chargerSalon() {
+        try {
+          const rep = await Salons.detail(salonId);
+          const s = rep?.salon || rep?.data?.salon || rep?.data || rep; // apiFetch renvoie déjà json.data
+          if (!s || !s._id) throw new Error("Salon introuvable");
+          monSalon = s;
+          document.title = `RDV — ${s.nom} — Salon Finder`;
+
+          $("bc-salon").textContent = s.nom;
+          [
+            "bc-salon",
+            "salon-link-recap",
+            "btn-retour-salon",
+            "retour-salon",
+          ].forEach((id) => ($(id).href = lienSalon()));
+          $("salon-nom-recap").textContent = s.nom;
+          $("salon-loc-recap").textContent =
+            (s.commune || "") + (s.quartier ? ", " + s.quartier : "");
+          if (s.noteGlobale > 0)
+            $("salon-note-recap").textContent =
+              "★".repeat(Math.round(s.noteGlobale)) +
+              " " +
+              Number(s.noteGlobale).toFixed(1);
+          if (s.photoCouverture)
+            $("salon-cover-wrap").innerHTML =
+              `<img src="${esc(s.photoCouverture)}" alt="${esc(s.nom)}">`;
+
+          $("rdv-date").min = dateLocale(new Date()); // date locale, pas UTC
+
+          await chargerServices(s._id);
+          majSidebarRecap();
+
+          $("page-loader").style.display = "none";
+          $("rdv-content").style.display = "block";
+          document.querySelectorAll(".rv").forEach((el) => {
+            if (typeof rvObs !== "undefined") rvObs.observe(el);
+            else el.classList.add("visible");
+          });
+        } catch (err) {
+          console.error("Salon :", err);
+          $("page-loader").innerHTML = `
+        <div style="text-align:center;padding:40px;">
+          <i class="ti ti-alert-triangle" style="font-size:3rem;color:var(--error);display:block;margin-bottom:14px;"></i>
+          <p style="color:var(--txt2);">Impossible de charger le salon : ${esc(err.message)}</p>
+          <a href="salons.html" class="btn btn-gold" style="margin-top:16px;"><i class="ti ti-arrow-left"></i> Retour</a>
+        </div>`;
+        }
+      }
+
+      /* ── Services ── */
+      async function chargerServices(id) {
+        const el = $("services-select");
+        try {
+          servicesDispo = enListe(await Services.liste(id), "services");
+          if (!servicesDispo.length) {
+            el.innerHTML =
+              '<p style="color:var(--txt3);font-size:.84rem;">Ce salon n\'a pas encore renseigné ses services. Continuez sans service.</p>';
+            sansService = true;
+            $("btn-step1-next").disabled = false;
+            return;
+          }
+          el.innerHTML = servicesDispo
+            .map((sv) => {
+              const desc = sv.description ? String(sv.description) : "";
+              return `<label class="service-select-card" data-id="${esc(sv._id)}">
+          <input type="radio" name="service" value="${esc(sv._id)}">
+          <div style="flex:1;min-width:0;">
+            <p class="service-select-nom">${esc(sv.nom)}</p>
+            <div class="service-select-info">
+              <span><i class="ti ti-clock"></i> ${sv.duree || 30} min</span>
+              ${desc ? `<span>${esc(desc.length > 35 ? desc.slice(0, 35) + "…" : desc)}</span>` : ""}
+            </div>
+          </div>
+          <p class="service-select-prix">${fcfa(sv.prix)} FCFA</p>
+        </label>`;
+            })
+            .join("");
+          // un seul écouteur : plus de problème de guillemets dans les noms de services
+          el.onchange = (e) => {
+            if (e.target.name === "service")
+              selectionnerService(e.target.value);
+          };
+        } catch (err) {
+          console.error("Services :", err);
+          el.innerHTML =
+            '<p style="color:var(--txt3);font-size:.84rem;">Impossible de charger les services. Vous pouvez continuer sans service.</p>';
+          sansService = true;
+          $("btn-step1-next").disabled = false;
+        }
+      }
+
+      function selectionnerService(id) {
+        const sv = servicesDispo.find((x) => String(x._id) === String(id));
+        if (!sv) return;
+        serviceChoisi = {
+          id: sv._id,
+          nom: sv.nom,
+          prix: sv.prix,
+          duree: sv.duree || 30,
+        };
+        sansService = false;
+        document
+          .querySelectorAll(".service-select-card")
+          .forEach((c) =>
+            c.classList.toggle("active", c.dataset.id === String(id)),
+          );
+        $("btn-step1-next").disabled = false;
+        majSidebarRecap();
+      }
+
+      /* ── Créneaux : suivent les horaires du salon et la durée du service ── */
+      function genererCreneaux(date) {
+        const h =
+          monSalon?.horaires?.[JOURS[new Date(date + "T00:00:00").getDay()]];
+        if (h && !h.ouvert) return null; // fermé ce jour-là
+        let debut = h?.debut ? versMin(h.debut) : 9 * 60;
+        let fin = h?.fin ? versMin(h.fin) : 19 * 60;
+        if (isNaN(debut) || isNaN(fin) || fin <= debut) {
+          debut = 9 * 60;
+          fin = 19 * 60;
+        }
+        const duree = serviceChoisi?.duree || 30;
+        const now = new Date();
+        const aujourdhui = date === dateLocale(now);
+        const minAujourdhui = now.getHours() * 60 + now.getMinutes() + 30; // 30 min de préavis
+        const out = [];
+        for (let m = debut; m + duree <= fin; m += 30) {
+          if (aujourdhui && m < minAujourdhui) continue;
+          out.push(deMin(m));
+        }
+        return out;
+      }
+
+      function chargerCreneaux() {
+        const date = $("rdv-date").value;
+        if (!date) return;
+        if (date < dateLocale(new Date())) {
+          afficherToast("Choisissez une date à venir.", "error");
+          $("rdv-date").value = "";
+          dateChoisie = null;
+          return;
+        }
+        dateChoisie = date;
+        heureChoisie = null;
+        $("btn-step2-next").disabled = true;
+        $("creneaux-bloc").style.display = "block";
+        const grid = $("creneaux-grid");
+        const liste = genererCreneaux(date);
+
+        if (liste === null) {
+          grid.innerHTML =
+            '<p style="color:var(--txt3);font-size:.84rem;grid-column:1/-1;"><i class="ti ti-calendar-off"></i> Le salon est fermé ce jour-là.</p>';
+        } else if (!liste.length) {
+          grid.innerHTML =
+            '<p style="color:var(--txt3);font-size:.84rem;grid-column:1/-1;"><i class="ti ti-clock-off"></i> Plus de créneau disponible ce jour-là. Essayez une autre date.</p>';
+        } else {
+          grid.innerHTML = liste
+            .map(
+              (h) =>
+                `<button type="button" class="creneau-btn" data-h="${h}">${h}</button>`,
+            )
+            .join("");
+          grid.onclick = (e) => {
+            const b = e.target.closest(".creneau-btn");
+            if (b) selectionnerCreneau(b.dataset.h, b);
+          };
+        }
+        majSidebarRecap();
+      }
+
+      function selectionnerCreneau(heure, btn) {
+        if (btn.classList.contains("taken")) return;
+        heureChoisie = heure;
+        document
+          .querySelectorAll(".creneau-btn")
+          .forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        $("btn-step2-next").disabled = false;
+        majSidebarRecap();
+      }
+
+      /* ── Récapitulatifs ── */
+      const dateLongue = (opts) =>
+        dateChoisie
+          ? new Date(dateChoisie + "T00:00:00").toLocaleDateString(
+              "fr-FR",
+              opts,
+            )
+          : null;
+
+      function afficherRecap() {
+        const dateF =
+          dateLongue({
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          }) || "—";
+        $("recap-content").innerHTML = `
+      <div class="recap-row"><span class="recap-label">Salon</span><span class="recap-val">${esc(monSalon?.nom || "—")}</span></div>
+      <div class="recap-row"><span class="recap-label">Adresse</span><span class="recap-val">${esc(monSalon?.commune || "—")}${monSalon?.quartier ? ", " + esc(monSalon.quartier) : ""}</span></div>
+      <div class="recap-row"><span class="recap-label">Service</span><span class="recap-val">${esc(serviceChoisi?.nom || "Non spécifié")}</span></div>
+      ${serviceChoisi ? `<div class="recap-row"><span class="recap-label">Durée</span><span class="recap-val">${serviceChoisi.duree} min</span></div>` : ""}
+      <div class="recap-row"><span class="recap-label">Date</span><span class="recap-val" style="text-transform:capitalize;">${dateF}</span></div>
+      <div class="recap-row"><span class="recap-label">Heure</span><span class="recap-val">${esc(heureChoisie || "—")}</span></div>
+      ${serviceChoisi ? `<div class="recap-row recap-total"><span class="recap-label">Total estimé</span><span class="recap-val">${fcfa(serviceChoisi.prix)} FCFA</span></div>` : ""}`;
+      }
+
+      function majSidebarRecap() {
+        const dateF = dateLongue({ day: "numeric", month: "long" });
+        const ligne = (ok, icone, texte, vide) =>
+          `<div style="display:flex;align-items:center;gap:8px;font-size:.84rem;color:${ok ? "var(--white)" : "var(--txt3)"};">
+        <i class="ti ${icone}" style="color:${ok ? "var(--gold)" : "var(--txt3)"};"></i>${ok ? texte : vide}</div>`;
+        $("sidebar-recap").innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        ${ligne(!!serviceChoisi, "ti-scissors", esc(serviceChoisi?.nom), sansService ? "Service à discuter avec le salon" : "Aucun service sélectionné")}
+        ${ligne(!!dateF, "ti-calendar", esc(dateF), "Aucune date choisie")}
+        ${ligne(!!heureChoisie, "ti-clock", esc(heureChoisie), "Aucun créneau choisi")}
+        ${
+          serviceChoisi
+            ? `<div style="margin-top:6px;padding-top:10px;border-top:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:.78rem;color:var(--txt2);">Estimation</span>
+          <span style="font-family:var(--font-display);font-size:1.2rem;font-style:italic;color:var(--gold);">${fcfa(serviceChoisi.prix)} F</span></div>`
+            : ""
+        }
+      </div>`;
+      }
+
+      /* ── Confirmation ── */
+      async function confirmerRDV() {
+        const al = $("al-rdv");
+        al.classList.remove("show");
+        if (!dateChoisie || !heureChoisie) {
+          al.innerHTML =
+            '<i class="ti ti-alert-circle"></i> Date et heure obligatoires.';
+          al.classList.add("show");
+          return;
+        }
+        const btn = $("btn-confirmer");
+        if (btn.disabled) return; // anti double-clic
+        btn.disabled = true;
+        btn.innerHTML =
+          '<div class="spinner spinner-sm" style="border-top-color:#1a1008;"></div> Envoi en cours…';
+
+        const message = $("rdv-message").value.trim();
+        const payload = {
+          salonId,
+          salon: salonId,
+          date: dateChoisie,
+          heure: heureChoisie,
+        };
+        if (serviceChoisi) {
+          payload.serviceId = serviceChoisi.id;
+          payload.service = serviceChoisi.id;
+        }
+        if (message) payload.message = message;
+
+        try {
+          await RendezVous.creer(payload);
+          $("rdv-form-wrapper").style.display = "none";
+          $("success-screen").classList.add("show");
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        } catch (err) {
+          console.error("RDV :", err);
+          al.innerHTML = `<i class="ti ti-alert-circle"></i> ${esc(err.message)}`;
+          al.classList.add("show");
+          btn.disabled = false;
+          btn.innerHTML =
+            '<i class="ti ti-calendar-check"></i> Confirmer la demande';
+        }
+      }
+
+      /* ── Init ── */
+      document.addEventListener("DOMContentLoaded", () => {
+        if (!salonId) {
+          window.location.href = "salons.html";
+          return;
+        }
+        if (!protegerPage("client")) return;
+        majNavbar();
+        chargerSalon();
+      });
+    </script>
+  </body>
+</html>

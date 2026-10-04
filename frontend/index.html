@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Trouvez les meilleurs salons de coiffure et de beauté à Abidjan — Salon Finder."
+    />
+    <title>Salon Finder — Trouvez votre salon</title>
+    <link rel="icon" type="image/png" href="logo/logo-salonfinder.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"
+    />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/theme.js"></script>
+  </head>
+  <body>
+    <div class="ambient-bg" aria-hidden="true">
+      <div class="ambient-orb ambient-orb--1"></div>
+      <div class="ambient-orb ambient-orb--2"></div>
+      <div class="ambient-orb ambient-orb--3"></div>
+    </div>
+    <div class="grain" aria-hidden="true"></div>
+
+    <!-- SPLASH -->
+    <div
+      class="splash"
+      id="splash"
+      role="status"
+      aria-label="Chargement de Salon Finder"
+      aria-live="polite"
+    >
+      <div class="splash-inner">
+        <span class="splash-dot" aria-hidden="true"></span>
+        <p class="splash-name">Salon<em>·</em>Finder</p>
+        <p class="splash-tagline">Abidjan &middot; Côte d'Ivoire</p>
+        <div class="splash-bar" aria-hidden="true">
+          <div class="splash-bar-fill"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="global-toast" role="status" aria-live="polite"></div>
+    <div class="loading-overlay" id="loading-overlay" aria-hidden="true">
+      <div class="spinner"></div>
+    </div>
+
+    <!-- NAVBAR -->
+    <nav class="navbar" role="navigation" aria-label="Navigation principale">
+      <a
+        href="index.html"
+        class="navbar-logo"
+        aria-label="Salon Finder — Accueil"
+      >
+        <span class="navbar-logo-dot" aria-hidden="true"></span
+        >Salon<em>·</em>Finder
+      </a>
+      <ul class="navbar-links" role="list">
+        <li><a href="index.html" class="active">Accueil</a></li>
+        <li><a href="pages/salons.html">Salons</a></li>
+        <li><a href="pages/salons.html?premium=true">Premium</a></li>
+      </ul>
+      <div class="navbar-right">
+        <button class="btn-theme" id="theme-btn" aria-label="Changer le thème">
+          <i class="ti ti-moon" aria-hidden="true"></i>
+        </button>
+        <div class="navbar-auth" id="navbar-auth"></div>
+        <button
+          class="hamburger"
+          id="hamburger"
+          aria-label="Ouvrir le menu"
+          aria-expanded="false"
+          aria-controls="mobile-menu"
+        >
+          <span aria-hidden="true"></span><span aria-hidden="true"></span
+          ><span aria-hidden="true"></span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- MENU MOBILE -->
+    <div
+      class="mobile-menu"
+      id="mobile-menu"
+      role="dialog"
+      aria-label="Menu de navigation"
+    >
+      <a href="index.html" class="active"
+        ><i class="ti ti-home" aria-hidden="true"></i> Accueil</a
+      >
+      <a href="pages/salons.html"
+        ><i class="ti ti-scissors" aria-hidden="true"></i> Salons</a
+      >
+      <a href="pages/salons.html?premium=true"
+        ><i class="ti ti-crown" aria-hidden="true"></i> Premium</a
+      >
+      <div class="mobile-menu-sep" role="separator"></div>
+      <div class="mobile-menu-btns" id="mobile-auth">
+        <a href="pages/auth.html" class="btn btn-outline btn-full"
+          ><i class="ti ti-login" aria-hidden="true"></i> Connexion</a
+        >
+        <a href="pages/auth.html?mode=inscription" class="btn btn-gold btn-full"
+          ><i class="ti ti-user-plus" aria-hidden="true"></i> Créer un compte</a
+        >
+      </div>
+    </div>
+
+    <!-- HERO -->
+    <section class="hero" aria-label="En-tête principal">
+      <div class="hero-media" aria-hidden="true">
+        <video autoplay muted loop playsinline preload="metadata">
+          <source
+            src="video/Barber_cutting_hair_in_salon_202608170511.mp4"
+            type="video/mp4"
+          />
+        </video>
+      </div>
+      <div class="hero-overlay" aria-hidden="true"></div>
+      <div class="container">
+        <div class="hero-content">
+          <p class="hero-eyebrow fade-up fade-up-1">
+            <span class="hero-eyebrow-line" aria-hidden="true"></span>Côte
+            d'Ivoire &middot; Abidjan &amp; environs
+          </p>
+          <h1 class="hero-title fade-up fade-up-2">
+            Votre salon,<br />votre <em>style.</em>
+          </h1>
+          <p class="hero-desc fade-up fade-up-3">
+            Découvrez les meilleurs salons de coiffure et de beauté près de chez
+            vous — de l'adresse classique à l'expérience la plus premium.
+          </p>
+
+          <div class="hero-search fade-up fade-up-4" role="search">
+            <div class="hero-search-bar">
+              <i class="ti ti-search hero-search-ico" aria-hidden="true"></i>
+              <input
+                type="text"
+                id="search-q"
+                class="hero-search-input"
+                placeholder="Salon, service, style..."
+                aria-label="Rechercher un salon"
+                onkeydown="if (event.key === 'Enter') lancerRecherche();"
+              />
+              <span class="hero-search-sep" aria-hidden="true"></span>
+              <select
+                class="hero-search-select"
+                id="search-commune"
+                aria-label="Filtrer par commune"
+              >
+                <option value="">Toutes les communes</option>
+              </select>
+            </div>
+            <button class="btn btn-gold" onclick="lancerRecherche()">
+              <i class="ti ti-search" aria-hidden="true"></i
+              ><span>Rechercher</span>
+            </button>
+          </div>
+
+          <div
+            class="hero-stats fade-up fade-up-5"
+            aria-label="Statistiques de la plateforme"
+          >
+            <div class="hero-stat">
+              <i class="ti ti-scissors hero-stat-ico" aria-hidden="true"></i>
+              <div>
+                <p class="hero-stat-num" id="stat-salons">—</p>
+                <p class="hero-stat-lbl">Salons</p>
+              </div>
+            </div>
+            <div class="hero-stat">
+              <i class="ti ti-map-pin hero-stat-ico" aria-hidden="true"></i>
+              <div>
+                <p class="hero-stat-num" id="stat-communes">—</p>
+                <p class="hero-stat-lbl">Communes</p>
+              </div>
+            </div>
+            <div class="hero-stat">
+              <i class="ti ti-star-filled hero-stat-ico" aria-hidden="true"></i>
+              <div>
+                <p class="hero-stat-num">4.8</p>
+                <p class="hero-stat-lbl">Note moy.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="hero-scroll" aria-hidden="true">
+        <div class="hero-scroll-line"></div>
+      </div>
+    </section>
+
+    <!-- COMMUNES -->
+    <section class="section section--sm" aria-labelledby="communes-title">
+      <div class="container">
+        <div class="section-header rv">
+          <p class="section-eyebrow">Explorer par zone</p>
+          <h2 class="section-title" id="communes-title">
+            Les <em>communes</em>
+          </h2>
+          <p class="section-sub">
+            Sélectionnez votre commune pour découvrir les salons près de chez
+            vous.
+          </p>
+        </div>
+        <div
+          class="communes-scroll"
+          id="communes-list"
+          role="list"
+          aria-label="Liste des communes"
+        >
+          <div class="spinner spinner--sm" aria-label="Chargement..."></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- POPULAIRES -->
+    <section class="section" aria-labelledby="populaires-title">
+      <div class="container">
+        <div class="section-header rv">
+          <p class="section-eyebrow">Les mieux notés</p>
+          <h2 class="section-title" id="populaires-title">
+            Salons <em>populaires</em>
+          </h2>
+          <p class="section-sub">Les adresses préférées de nos utilisateurs.</p>
+        </div>
+        <div class="salons-grid" id="salons-pop" role="list">
+          <div class="spinner"></div>
+        </div>
+        <div class="rv" style="text-align: center; margin-top: 40px">
+          <a href="pages/salons.html" class="btn btn-glass"
+            >Voir tous les salons
+            <i class="ti ti-arrow-right" aria-hidden="true"></i
+          ></a>
+        </div>
+      </div>
+    </section>
+
+    <!-- PREMIUM -->
+    <section
+      class="section"
+      style="padding-top: 0"
+      aria-labelledby="premium-title"
+    >
+      <div class="container">
+        <div class="section-header rv">
+          <p class="section-eyebrow">Sélection exclusive</p>
+          <h2 class="section-title" id="premium-title">
+            Salons <em>Premium</em>
+          </h2>
+          <p class="section-sub">
+            Les établissements les plus haut de gamme d'Abidjan.
+          </p>
+        </div>
+        <div class="salons-grid" id="salons-premium" role="list">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA PROPRIÉTAIRE -->
+    <section class="section" aria-labelledby="cta-title">
+      <div class="container">
+        <div
+          class="glass-card rv"
+          style="
+            padding: clamp(32px, 6vw, 64px);
+            text-align: center;
+            max-width: 680px;
+            margin-inline: auto;
+          "
+        >
+          <i
+            class="ti ti-building-store"
+            style="
+              font-size: 2.4rem;
+              color: var(--gold);
+              display: block;
+              margin-bottom: 18px;
+            "
+            aria-hidden="true"
+          ></i>
+          <h2 class="section-title" id="cta-title" style="margin-bottom: 12px">
+            Vous êtes propriétaire<br />d'un <em>salon ?</em>
+          </h2>
+          <p class="section-sub" style="margin-bottom: 32px">
+            Rejoignez Salon Finder et gagnez en visibilité auprès de milliers de
+            clients à la recherche du salon parfait.
+          </p>
+          <a
+            href="pages/auth.html?mode=inscription&role=salon"
+            class="btn btn-gold btn-lg"
+            >Inscrire mon salon
+            <i class="ti ti-arrow-right" aria-hidden="true"></i
+          ></a>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer role="contentinfo">
+      <div class="container">
+        <div class="footer-top">
+          <div class="footer-brand">
+            <p class="footer-brand-logo">Salon<em>·</em>Finder</p>
+            <p>
+              La plateforme de référence pour trouver les meilleurs salons de
+              coiffure en Côte d'Ivoire.
+            </p>
+          </div>
+          <div class="footer-cols">
+            <div class="footer-col">
+              <h4>Explorer</h4>
+              <a href="pages/salons.html"
+                ><i class="ti ti-scissors" aria-hidden="true"></i> Tous les
+                salons</a
+              >
+              <a href="pages/salons.html?premium=true"
+                ><i class="ti ti-crown" aria-hidden="true"></i> Premium</a
+              >
+              <a href="pages/salons.html?categorie=barbier"
+                ><i class="ti ti-razor" aria-hidden="true"></i> Barbiers</a
+              >
+            </div>
+            <div class="footer-col">
+              <h4>Compte</h4>
+              <a href="pages/auth.html?mode=inscription"
+                ><i class="ti ti-user-plus" aria-hidden="true"></i> Créer un
+                compte</a
+              >
+              <a href="pages/auth.html?mode=connexion"
+                ><i class="ti ti-login" aria-hidden="true"></i> Connexion</a
+              >
+              <a href="pages/dashboard-client.html"
+                ><i class="ti ti-layout-dashboard" aria-hidden="true"></i> Mon
+                espace</a
+              >
+            </div>
+            <div class="footer-col">
+              <h4>Salon Pro</h4>
+              <a href="pages/auth.html?mode=inscription&role=salon"
+                ><i class="ti ti-plus" aria-hidden="true"></i> Inscrire mon
+                salon</a
+              >
+              <a href="pages/dashboard-salon.html"
+                ><i class="ti ti-chart-bar" aria-hidden="true"></i> Espace
+                pro</a
+              >
+            </div>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <p class="footer-bottom-left">
+            © 2025 Salon Finder &middot; Fait avec ♥ pour la Côte d'Ivoire
+          </p>
+        </div>
+      </div>
+    </footer>
+
+    <!-- SCRIPTS -->
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+      /* ── Helpers : acceptent [..], {data:[..]}, {data:{salons:[..]}}, {salons:[..]} ── */
+      function extraireListe(res, cle) {
+        if (Array.isArray(res)) return res;
+        if (Array.isArray(res?.data)) return res.data;
+        if (cle && Array.isArray(res?.data?.[cle])) return res.data[cle];
+        if (cle && Array.isArray(res?.[cle])) return res[cle];
+        return [];
+      }
+      function extraireTotal(res, liste) {
+        return (
+          res?.total ??
+          res?.data?.total ??
+          res?.pagination?.total ??
+          liste.length
+        );
+      }
+      const apiListeSalons = (params) =>
+        (Salons.liste || Salons.lister).call(Salons, params);
+
+      const carteSalon = (s) =>
+        typeof renderSalonCard === "function"
+          ? renderSalonCard(s)
+          : `<a class="glass-card" href="pages/salon-detail.html?id=${s._id}" style="padding:16px;display:block"><strong>${s.nom}</strong><br><small>${s.commune || ""}</small></a>`;
+
+      const observer = () => {
+        document.querySelectorAll(".rv:not(.visible)").forEach((el) => {
+          if (typeof rvObs !== "undefined") rvObs.observe(el);
+          else el.classList.add("visible");
+        });
+      };
+
+      /* ── Recherche : une commune tapée devient un filtre commune ── */
+      function lancerRecherche() {
+        const q = document.getElementById("search-q").value.trim();
+        const sel = document.getElementById("search-commune");
+        let commune = sel.value;
+        let texte = q;
+        const norm = (s) =>
+          String(s)
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase()
+            .trim();
+        if (!commune && q) {
+          const trouvee = [...sel.options].find(
+            (o) => o.value && norm(o.value) === norm(q),
+          );
+          if (trouvee) {
+            commune = trouvee.value;
+            texte = "";
+          }
+        }
+        const params = new URLSearchParams();
+        if (texte) params.set("q", texte);
+        if (commune) params.set("commune", commune);
+        const qs = params.toString();
+        window.location.href = "pages/salons.html" + (qs ? "?" + qs : "");
+      }
+
+      /* ── Communes ── */
+      async function chargerCommunes() {
+        const list = document.getElementById("communes-list");
+        const sel = document.getElementById("search-commune");
+        try {
+          const data = extraireListe(await Salons.communes(), "communes");
+          list.innerHTML = data.length
+            ? data
+                .map(
+                  (c) =>
+                    `<button class="commune-chip rv" onclick="filtrerCommune('${String(c).replace(/'/g, "\\'")}')" role="listitem"><i class="ti ti-map-pin" aria-hidden="true"></i> ${c}</button>`,
+                )
+                .join("")
+            : '<p style="color:var(--txt2)">Aucune commune pour l\'instant.</p>';
+          data.forEach((c) =>
+            sel.insertAdjacentHTML(
+              "beforeend",
+              `<option value="${c}">${c}</option>`,
+            ),
+          );
+          document.getElementById("stat-communes").textContent = data.length;
+          observer();
+        } catch (err) {
+          console.error("Communes :", err);
+          list.innerHTML = "";
+        }
+      }
+
+      function filtrerCommune(c) {
+        window.location.href =
+          "pages/salons.html?commune=" + encodeURIComponent(c);
+      }
+
+      /* ── Salons ── */
+      async function chargerSalons() {
+        const popEl = document.getElementById("salons-pop");
+        const preEl = document.getElementById("salons-premium");
+        const vide = (t) =>
+          `<p style="color:var(--txt2);grid-column:1/-1">${t}</p>`;
+
+        const [pop, pre] = await Promise.allSettled([
+          apiListeSalons({ tri: "note", limit: 8 }),
+          apiListeSalons({ premium: "true", limit: 4 }),
+        ]);
+
+        if (pop.status === "fulfilled") {
+          const liste = extraireListe(pop.value, "salons");
+          countUp(
+            document.getElementById("stat-salons"),
+            extraireTotal(pop.value, liste) || 0,
+            "+",
+          );
+          popEl.innerHTML = liste.length
+            ? liste.map(carteSalon).join("")
+            : vide("Aucun salon pour l'instant.");
+        } else {
+          console.error("Salons populaires :", pop.reason);
+          popEl.innerHTML = vide(
+            "Impossible de charger les salons (le serveur démarre peut-être, réessayez dans 30 s).",
+          );
+        }
+
+        if (pre.status === "fulfilled") {
+          const liste = extraireListe(pre.value, "salons");
+          preEl.innerHTML = liste.length
+            ? liste.map(carteSalon).join("")
+            : vide("Aucun salon premium pour l'instant.");
+        } else {
+          console.error("Salons premium :", pre.reason);
+          preEl.innerHTML = "";
+        }
+        observer();
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        chargerCommunes();
+        chargerSalons();
+      });
+    </script>
+  </body>
+</html>
