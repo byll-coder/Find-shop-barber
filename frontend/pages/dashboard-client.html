@@ -1,11 +1,13 @@
 <!doctype html>
 <html lang="fr" data-theme="dark">
   <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script>
-      /* Garde de connexion : s'exécute AVANT tout affichage (pas de flash du dashboard) */
+      /* Garde de connexion : s'exécute AVANT tout affichage (pas de flash de la page protégée) */
       (function () {
         try {
-          var requis = "client"; // page réservée aux clients
+          var requis = "client"; // rôle autorisé sur cette page (null = tout utilisateur connecté)
           var t = localStorage.getItem("sf_v2_token");
           var u = JSON.parse(localStorage.getItem("sf_v2_user") || "null");
           var ok = !!t;
@@ -28,8 +30,6 @@
         } catch (e) {}
       })();
     </script>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mon espace — Salon Finder</title>
     <link rel="icon" type="image/png" href="../logo/logo-salonfinder.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />

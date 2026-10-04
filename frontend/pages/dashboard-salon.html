@@ -1,31 +1,35 @@
 <!doctype html>
 <html lang="fr" data-theme="dark">
   <head>
-         <script>
-  (function () {
-    try {
-      var requis = "client"; // "salon" dans dashboard-salon.html ; null dans messages.html
-      var t = localStorage.getItem("sf_v2_token");
-      var u = JSON.parse(localStorage.getItem("sf_v2_user") || "null");
-      var ok = !!t;
-      if (ok) {
-        try { // token expiré = déconnecté
-          var p = JSON.parse(atob(t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-          if (p.exp && p.exp * 1000 < Date.now()) ok = false;
-        } catch (e) {}
-      }
-      if (!ok) {
-        localStorage.removeItem("sf_v2_token");
-        localStorage.removeItem("sf_v2_user");
-        location.replace("auth.html");
-      } else if (requis && u && u.role && u.role !== requis) {
-        location.replace("../index.html");
-      }
-    } catch (e) {}
-  })();
-</script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      /* Garde de connexion : s'exécute AVANT tout affichage (pas de flash de la page protégée) */
+      (function () {
+        try {
+          var requis = "salon"; // rôle autorisé sur cette page (null = tout utilisateur connecté)
+          var t = localStorage.getItem("sf_v2_token");
+          var u = JSON.parse(localStorage.getItem("sf_v2_user") || "null");
+          var ok = !!t;
+          if (ok) {
+            try {
+              // un token expiré = déconnecté
+              var p = JSON.parse(
+                atob(t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")),
+              );
+              if (p.exp && p.exp * 1000 < Date.now()) ok = false;
+            } catch (e) {}
+          }
+          if (!ok) {
+            localStorage.removeItem("sf_v2_token");
+            localStorage.removeItem("sf_v2_user");
+            location.replace("auth.html");
+          } else if (requis && u && u.role && u.role !== requis) {
+            location.replace("../index.html");
+          }
+        } catch (e) {}
+      })();
+    </script>
     <title>Espace Pro — Salon Finder</title>
     <link rel="icon" type="image/png" href="../logo/logo-salonfinder.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -41,8 +45,6 @@
     <link rel="stylesheet" href="../css/animations.css" />
     <link rel="stylesheet" href="../css/styles.css" />
     <link rel="stylesheet" href="../css/dashboard.css" />
-    <head>
-
     <style>
       .status-badge {
         display: inline-flex;
@@ -784,11 +786,13 @@
           ?.classList.add("active");
         if (nom === "rdv") chargerRDV();
         if (nom === "avis") chargerAvis();
-        document.querySelector(".dash-nav-btn.active")?.scrollIntoView({
-          inline: "center",
-          block: "nearest",
-          behavior: "smooth",
-        });
+        document
+          .querySelector(".dash-nav-btn.active")
+          ?.scrollIntoView({
+            inline: "center",
+            block: "nearest",
+            behavior: "smooth",
+          });
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
 

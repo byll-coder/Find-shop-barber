@@ -1,16 +1,19 @@
 <!doctype html>
 <html lang="fr" data-theme="dark">
   <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script>
+      /* Garde de connexion : s'exécute AVANT tout affichage (pas de flash de la page protégée) */
       (function () {
         try {
-          var requis = "client"; // "salon" dans dashboard-salon.html ; null dans messages.html
+          var requis = "client"; // rôle autorisé sur cette page (null = tout utilisateur connecté)
           var t = localStorage.getItem("sf_v2_token");
           var u = JSON.parse(localStorage.getItem("sf_v2_user") || "null");
           var ok = !!t;
           if (ok) {
             try {
-              // token expiré = déconnecté
+              // un token expiré = déconnecté
               var p = JSON.parse(
                 atob(t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")),
               );
@@ -27,8 +30,6 @@
         } catch (e) {}
       })();
     </script>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Réservation — Salon Finder</title>
     <link rel="icon" type="image/png" href="../logo/logo-salonfinder.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
