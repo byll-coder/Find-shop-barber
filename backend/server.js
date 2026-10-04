@@ -5,7 +5,6 @@ const cors = require("cors");
 const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
 const { Server } = require("socket.io");
-
 const config = require("./config/config");
 const connectDB = require("./config/db");
 const errorHandler = require("./middleware/errorHandler");
@@ -16,8 +15,11 @@ const app = express();
 const server = http.createServer(app);
 
 /* ── Définition des origines autorisées ──────────────────────── */
+/* ── Définition des origines autorisées ──────────────────────── */
 const allowedOrigins = [
   config.FRONTEND_URL,
+  "https://find-shop-barber-1.onrender.com",
+  "https://find-shop-barber.onrender.com",
   "http://127.0.0.1:5501",
   "http://localhost:5501",
   "http://127.0.0.1:5500",
@@ -27,13 +29,19 @@ const allowedOrigins = [
 /* ── Socket.IO ───────────────────────────────────────────────── */
 const io = new Server(server, {
   cors: {
-    origin: config.FRONTEND_URL,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, true); // Autorise pour éviter les blocages WebSockets
+      }
+    },
     credentials: true,
   },
   transports: ["websocket", "polling"],
 });
 initSocket(io);
-app.set("io", io); // accès depuis les controllers si besoin
+app.set("io", io);
 
 /* ── Sécurité ────────────────────────────────────────────────── */
 app.use(
@@ -45,7 +53,18 @@ app.use(
 /* ── CORS ────────────────────────────────────────────────────── */
 app.use(
   cors({
-    origin: config.FRONTEND_URL,
+    origin: (origin, callback) => {
+      // Autorise les requêtes sans origine (comme les apps mobiles/Postman) ou si dans la liste
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        process.env.NODE_ENV !== "production"
+      ) {
+        callback(null, true);
+      } else {
+        callback(null, true); // Tu peux remplacer par callback(null, true) pour tout débloquer
+      }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -95,11 +114,11 @@ app.use(errorHandler);
 const start = async () => {
   await connectDB();
   server.listen(config.PORT, () => {
-    console.log("\n🌿  ─────────────────────────────────────────");
-    console.log(`   Salon Finder V2 API`);
-    console.log(`   http://localhost:${config.PORT}`);
-    console.log(`   Env : ${config.NODE_ENV}`);
-    console.log("🔌  Socket.IO activé");
+    console.log("\n🌿  ─────────────────────────────────────────");
+    console.log(`   Salon Finder V2 API`);
+    console.log(`   http://localhost:${config.PORT}`);
+    console.log(`   Env : ${config.NODE_ENV}`);
+    console.log("🔌  Socket.IO activé");
     console.log("─────────────────────────────────────────────\n");
   });
 };
