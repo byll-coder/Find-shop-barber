@@ -7,7 +7,7 @@ const API_URL =
   window.location.hostname === "localhost" ||
   window.location.hostname === "127.0.0.1"
     ? "http://localhost:5000/api"
-    : "https://find-shop-barber.onrender.com";
+    : "https://find-shop-barber.onrender.com/api";
 
 /* ── Fetch de base ───────────────────────────────────────────── */
 async function apiFetch(path, options = {}) {
