@@ -1,6 +1,6 @@
 "use strict";
 const router = require("express").Router();
-const ctrl = require("../controllers/appointmentController");
+const ctrl = require("../controllers/appointmentsController");
 const { proteger } = require("../middleware/auth");
 const { autoriser } = require("../middleware/role");
 
