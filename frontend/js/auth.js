@@ -59,6 +59,20 @@ function redigerApresConnexion(user) {
     Session.clear();
     return;
   }
+  // Page demandée avant la connexion (ex : « Réserver » depuis la fiche d'un salon)
+  const retour = sessionStorage.getItem("sf_retour");
+  sessionStorage.removeItem("sf_retour");
+  if (
+    retour &&
+    /^(reservation|salon-detail|messages)\.html(\?[\w=&%.-]*)?$/.test(retour)
+  ) {
+    const reservePro =
+      user.role === "salon" && retour.startsWith("reservation");
+    if (!reservePro) {
+      window.location.href = _chemin("/pages/" + retour);
+      return;
+    }
+  }
   window.location.href =
     user.role === "salon"
       ? _chemin("/pages/dashboard-salon.html")

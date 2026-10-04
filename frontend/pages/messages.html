@@ -145,13 +145,23 @@
     <script>
       let toutesConvs = [];
       let convActuelle = null;
+      let brouillon = null; // conversation voulue (?to=…&salon=…) mais pas encore créée : elle l'est au 1er message
+      let enAttente = []; // mes messages affichés tout de suite, en attente de confirmation du serveur
 
-      /* ── Helpers ── */
-      // apiFetch renvoie déjà json.data : on accepte [..] ou {data:[..]}
-      const enListe = (res) =>
-        Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
+      /* ── Helpers ──
+     apiFetch renvoie déjà json.data : on accepte [..] ou {data:[..]} */
+      const enListe = (res, cle) =>
+        Array.isArray(res)
+          ? res
+          : Array.isArray(res?.data)
+            ? res.data
+            : cle && Array.isArray(res?.[cle])
+              ? res[cle]
+              : [];
       const enObjet = (res) =>
-        res?.data && !Array.isArray(res.data) ? res.data : res;
+        res?.conversation ||
+        res?.message ||
+        (res?.data && !Array.isArray(res.data) ? res.data : res);
       const esc = (s) =>
         String(s ?? "").replace(
           /[&<>"']/g,
@@ -165,6 +175,8 @@
             })[c],
         );
       const idDe = (x) => (x && typeof x === "object" ? x._id : x);
+      const moi = () => Session.getUser() || {};
+      const estMoi = (msg) => idDe(msg.expediteur) === moi()._id;
 
       function dateCourtMsg(iso) {
         if (!iso) return "";
@@ -183,10 +195,13 @@
         });
       }
 
+      const autreParticipant = (c) =>
+        c?.participants?.find((p) => idDe(p) !== moi()._id) ||
+        c?.participants?.[0];
+
       /* ── Liste des conversations ── */
       function renderConvs(convs) {
         const el = document.getElementById("conv-list");
-        const user = Session.getUser() || {};
         convs = Array.isArray(convs) ? convs : [];
         if (!convs.length) {
           el.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--txt3);"><i class="ti ti-message-off" style="font-size:2rem;display:block;margin-bottom:10px;"></i><p style="font-size:.84rem;">Aucune conversation.</p></div>`;
@@ -194,53 +209,47 @@
         }
         el.innerHTML = convs
           .map((c) => {
-            const autre =
-              c.participants?.find((p) => idDe(p) !== user._id) ||
-              c.participants?.[0];
+            const autre = autreParticipant(c);
             const nonLus = c.nonLus
-              ? c.nonLus[user._id] || c.nonLus.get?.(user._id) || 0
+              ? c.nonLus[moi()._id] || c.nonLus.get?.(moi()._id) || 0
               : 0;
             const lastMsg =
               c.dernierMessage?.contenu || "Démarrer la conversation…";
             const init = (autre?.nom || "?")[0].toUpperCase();
             return `<div class="conv-item ${c._id === convActuelle ? "active" : ""}" data-id="${c._id}" onclick="ouvrirConv('${c._id}')">
-          <div class="conv-av">${autre?.avatar ? `<img src="${esc(autre.avatar)}" alt="">` : init}</div>
-          <div class="conv-info">
-            <p class="conv-name">${esc(autre?.nom || "Utilisateur")}</p>
-            <p class="conv-last">${esc(lastMsg.substring(0, 40))}${lastMsg.length > 40 ? "…" : ""}</p>
-          </div>
-          <div class="conv-meta">
-            <span class="conv-time">${dateCourtMsg(c.dernierMessageAt)}</span>
-            ${nonLus > 0 ? `<span class="conv-unread">${nonLus > 9 ? "9+" : nonLus}</span>` : ""}
-          </div>
-        </div>`;
+        <div class="conv-av">${autre?.avatar ? `<img src="${esc(autre.avatar)}" alt="">` : init}</div>
+        <div class="conv-info">
+          <p class="conv-name">${esc(autre?.nom || "Utilisateur")}</p>
+          <p class="conv-last">${esc(lastMsg.substring(0, 40))}${lastMsg.length > 40 ? "…" : ""}</p>
+        </div>
+        <div class="conv-meta">
+          <span class="conv-time">${dateCourtMsg(c.dernierMessageAt)}</span>
+          ${nonLus > 0 ? `<span class="conv-unread">${nonLus > 9 ? "9+" : nonLus}</span>` : ""}
+        </div>
+      </div>`;
           })
           .join("");
       }
 
       function filtrerConvs() {
         const q = document.getElementById("search-conv").value.toLowerCase();
-        const user = Session.getUser() || {};
         renderConvs(
-          toutesConvs.filter((c) => {
-            const autre = c.participants?.find((p) => idDe(p) !== user._id);
-            return (autre?.nom || "").toLowerCase().includes(q);
-          }),
+          toutesConvs.filter((c) =>
+            (autreParticipant(c)?.nom || "").toLowerCase().includes(q),
+          ),
         );
       }
 
       /* ── Charger les conversations
-        depuisURL = true UNIQUEMENT au premier chargement (sinon boucle infinie) ── */
+     depuisURL = true UNIQUEMENT au premier chargement (sinon boucle infinie) ── */
       async function chargerConvs(depuisURL = false) {
         try {
-          toutesConvs = enListe(await Messages.conversations());
+          toutesConvs = enListe(
+            await Messages.conversations(),
+            "conversations",
+          );
           renderConvs(toutesConvs);
-          if (depuisURL) {
-            const convParam = new URLSearchParams(window.location.search).get(
-              "conv",
-            );
-            if (convParam) ouvrirConv(convParam);
-          }
+          if (depuisURL) await ouvrirDepuisURL();
         } catch (err) {
           console.error("Conversations :", err);
           document.getElementById("conv-list").innerHTML = `
@@ -252,7 +261,55 @@
         }
       }
 
-      /* ── Message ── */
+      /* ── Arrivée depuis une fiche salon : ?to=<proprietaire>&salon=<salon> ── */
+      async function ouvrirDepuisURL() {
+        const p = new URLSearchParams(window.location.search);
+        if (p.get("conv")) return ouvrirConv(p.get("conv"));
+        if (p.get("to"))
+          return demarrerConversation(p.get("to"), p.get("salon"));
+      }
+
+      function trouverConv(to, salon) {
+        return toutesConvs.find(
+          (c) =>
+            (c.participants || []).some((x) => idDe(x) === to) &&
+            (!salon || !c.salon || idDe(c.salon) === salon),
+        );
+      }
+
+      async function demarrerConversation(to, salon) {
+        const existante = trouverConv(to, salon);
+        if (existante) return ouvrirConv(existante._id); // déjà en discussion : on la rouvre
+        let nom = "Nouvelle conversation";
+        if (salon) {
+          try {
+            const r = await Salons.detail(salon);
+            nom = (r?.salon || r?.data?.salon || r?.data || r)?.nom || nom;
+          } catch {}
+        }
+        brouillon = { to, salon };
+        convActuelle = null;
+        afficherChat({ nom, salonId: salon, msgs: [], convId: null });
+        document
+          .getElementById("msg-input")
+          ?.setAttribute("placeholder", "Écrivez votre premier message…");
+      }
+
+      async function creerConversation(to, salon) {
+        // ⚠ route à confirmer côté backend (POST /api/messages/conversations) — plusieurs noms de champs sont envoyés par prudence
+        return apiFetch("/messages/conversations", {
+          method: "POST",
+          body: JSON.stringify({
+            destinataire: to,
+            destinataireId: to,
+            participantId: to,
+            salon,
+            salonId: salon,
+          }),
+        });
+      }
+
+      /* ── Messages ── */
       function renderMsg(msg, isMine) {
         const init = (msg.expediteur?.nom || "?")[0].toUpperCase();
         return `<div class="msg-group ${isMine ? "mine" : ""}">
@@ -263,12 +320,50 @@
       </div>
     </div>`;
       }
-      const estMoi = (msg) =>
-        idDe(msg.expediteur) === (Session.getUser() || {})._id;
 
-      /* ── Ouvrir une conversation ── */
+      function afficherChat({ nom, avatar, salonId, msgs, convId }) {
+        const initA = (nom || "?")[0].toUpperCase();
+        document.getElementById("chat-zone").innerHTML = `
+      <div class="chat-header">
+        <div class="conv-av" style="flex-shrink:0;">${avatar ? `<img src="${esc(avatar)}" alt="">` : initA}</div>
+        <div style="flex:1;">
+          <p class="chat-header-name">${esc(nom || "Utilisateur")}</p>
+          <p class="chat-header-status" id="user-status"><span class="online-dot"></span> En ligne</p>
+        </div>
+        ${salonId ? `<a href="salon-detail.html?id=${esc(idDe(salonId))}" class="btn btn-glass btn-sm"><i class="ti ti-scissors"></i> Voir le salon</a>` : ""}
+      </div>
+
+      <div class="chat-messages" id="chat-messages">
+        ${
+          msgs.length
+            ? msgs.map((m) => renderMsg(m, estMoi(m))).join("")
+            : `<div class="msg-vide" style="text-align:center;padding:40px;color:var(--txt3);"><i class="ti ti-message-circle" style="font-size:2rem;display:block;margin-bottom:8px;"></i><p style="font-size:.84rem;">Début de la conversation</p></div>`
+        }
+        <div id="typing-wrap" style="display:none;">
+          <div class="msg-group">
+            <div class="conv-av" style="width:28px;height:28px;">${initA}</div>
+            <div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-input-zone">
+        <div class="chat-input-row">
+          <input type="text" id="msg-input" placeholder="Écrivez un message…"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();envoyerMsg();}"
+            ${convId ? `oninput="try{Socket.startTyping('${convId}')}catch(e){}"` : ""}/>
+          <button class="btn-send" id="btn-send" onclick="envoyerMsg()"><i class="ti ti-send"></i></button>
+        </div>
+      </div>`;
+        scrollBas();
+        document.getElementById("msg-input")?.focus();
+      }
+
+      /* ── Ouvrir une conversation existante ── */
       async function ouvrirConv(convId) {
         convActuelle = convId;
+        brouillon = null;
+        enAttente = [];
         document
           .querySelectorAll(".conv-item")
           .forEach((el) =>
@@ -281,49 +376,16 @@
         }
 
         try {
-          const msgs = enListe(await Messages.getMessages(convId));
+          const msgs = enListe(await Messages.getMessages(convId), "messages");
           const conv = toutesConvs.find((c) => c._id === convId);
-          const user = Session.getUser() || {};
-          const autre =
-            conv?.participants?.find((p) => idDe(p) !== user._id) ||
-            conv?.participants?.[0];
-          const initA = (autre?.nom || "?")[0].toUpperCase();
-
-          document.getElementById("chat-zone").innerHTML = `
-        <div class="chat-header">
-          <div class="conv-av" style="flex-shrink:0;">${autre?.avatar ? `<img src="${esc(autre.avatar)}" alt="">` : initA}</div>
-          <div style="flex:1;">
-            <p class="chat-header-name">${esc(autre?.nom || "Utilisateur")}</p>
-            <p class="chat-header-status" id="user-status"><span class="online-dot"></span> En ligne</p>
-          </div>
-          ${conv?.salon ? `<a href="salon-detail.html?id=${idDe(conv.salon)}" class="btn btn-glass btn-sm"><i class="ti ti-scissors"></i> Voir le salon</a>` : ""}
-        </div>
-
-        <div class="chat-messages" id="chat-messages">
-          ${
-            msgs.length
-              ? msgs.map((m) => renderMsg(m, estMoi(m))).join("")
-              : `<div style="text-align:center;padding:40px;color:var(--txt3);"><i class="ti ti-message-circle" style="font-size:2rem;display:block;margin-bottom:8px;"></i><p style="font-size:.84rem;">Début de la conversation</p></div>`
-          }
-          <div id="typing-wrap" style="display:none;">
-            <div class="msg-group">
-              <div class="conv-av" style="width:28px;height:28px;">${initA}</div>
-              <div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="chat-input-zone">
-          <div class="chat-input-row">
-            <input type="text" id="msg-input" placeholder="Écrivez un message…"
-              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();envoyerMsg();}"
-              oninput="try{Socket.startTyping('${convId}')}catch(e){}"/>
-            <button class="btn-send" id="btn-send" onclick="envoyerMsg()"><i class="ti ti-send"></i></button>
-          </div>
-        </div>`;
-
-          scrollBas();
-          document.getElementById("msg-input")?.focus();
+          const autre = autreParticipant(conv);
+          afficherChat({
+            nom: autre?.nom,
+            avatar: autre?.avatar,
+            salonId: conv?.salon,
+            msgs,
+            convId,
+          });
           chargerConvs(); // rafraîchit les non-lus, SANS rouvrir la conversation
         } catch (err) {
           console.error("Messages :", err);
@@ -331,37 +393,17 @@
         }
       }
 
-      /* ── Envoyer ── */
-      async function envoyerMsg() {
-        if (!convActuelle) return;
-        const input = document.getElementById("msg-input");
-        const contenu = input?.value.trim();
-        if (!contenu) return;
-        input.value = "";
-        let sent = false;
-        try {
-          sent = Socket.sendMessage(convActuelle, contenu);
-        } catch (e) {}
-        if (!sent) {
-          try {
-            const res = await Messages.envoyer(convActuelle, { contenu });
-            appendMsg(enObjet(res), true);
-            scrollBas();
-            chargerConvs();
-          } catch (err) {
-            afficherToast(err.message, "error");
-            input.value = contenu;
-          }
-        }
-      }
-
+      /* ── Ajouter un message dans le chat ── */
       function appendMsg(msg, isMine) {
         const container = document.getElementById("chat-messages");
         const typing = document.getElementById("typing-wrap");
-        if (!container) return;
+        if (!container) return null;
+        container.querySelector(".msg-vide")?.remove(); // le « Début de la conversation » disparaît au 1er message
         const el = document.createElement("div");
         el.innerHTML = renderMsg(msg, isMine);
-        container.insertBefore(el.firstElementChild, typing);
+        const noeud = el.firstElementChild;
+        container.insertBefore(noeud, typing);
+        return noeud;
       }
 
       function scrollBas() {
@@ -369,17 +411,84 @@
         if (el) el.scrollTop = el.scrollHeight;
       }
 
+      /* ── Envoyer ── */
+      async function envoyerMsg() {
+        const input = document.getElementById("msg-input");
+        const contenu = input?.value.trim();
+        if (!contenu) return;
+
+        /* Première fois : on crée la conversation, puis on envoie le message */
+        if (!convActuelle && brouillon) return premierMessage(contenu, input);
+        if (!convActuelle) return;
+
+        input.value = "";
+        // le message s'affiche tout de suite (même si le serveur ne renvoie pas d'écho à l'expéditeur)
+        const noeud = appendMsg(
+          { contenu, createdAt: new Date().toISOString(), expediteur: moi() },
+          true,
+        );
+        enAttente.push({ contenu, noeud });
+        scrollBas();
+
+        let sent = false;
+        try {
+          sent = Socket.sendMessage(convActuelle, contenu);
+        } catch (e) {}
+        if (!sent) {
+          try {
+            await Messages.envoyer(convActuelle, { contenu });
+            enAttente = enAttente.filter((p) => p.noeud !== noeud);
+            chargerConvs();
+          } catch (err) {
+            noeud?.remove();
+            enAttente = enAttente.filter((p) => p.noeud !== noeud);
+            afficherToast(err.message, "error");
+            input.value = contenu;
+          }
+        }
+      }
+
+      async function premierMessage(contenu, input) {
+        input.disabled = true;
+        try {
+          const conv = enObjet(
+            await creerConversation(brouillon.to, brouillon.salon),
+          );
+          const id = conv?._id;
+          if (!id) throw new Error("Le serveur n'a pas créé la conversation.");
+          await Messages.envoyer(id, { contenu });
+          brouillon = null;
+          history.replaceState(
+            null,
+            "",
+            "messages.html?conv=" + encodeURIComponent(id),
+          );
+          await chargerConvs();
+          await ouvrirConv(id);
+        } catch (err) {
+          console.error("Création conversation :", err);
+          afficherToast(err.message, "error");
+          input.disabled = false;
+          input.focus();
+        }
+      }
+
       /* ── Événements socket ── */
       function initSocketEvents() {
         Socket.on("message:receive", (msg) => {
           if (idDe(msg.conversation) === convActuelle) {
-            appendMsg(msg, estMoi(msg)); // mon propre message renvoyé par le serveur reste à droite
+            const i = estMoi(msg)
+              ? enAttente.findIndex((p) => p.contenu === msg.contenu)
+              : -1;
+            if (i >= 0)
+              enAttente.splice(i, 1); // écho de mon propre message déjà affiché : pas de doublon
+            else appendMsg(msg, estMoi(msg));
             scrollBas();
           }
           chargerConvs();
         });
         Socket.on("typing:start", ({ userId }) => {
-          if (userId !== (Session.getUser() || {})._id)
+          if (userId !== moi()._id)
             document
               .getElementById("typing-wrap")
               ?.style.setProperty("display", "block");

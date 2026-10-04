@@ -579,13 +579,25 @@
         }
       }
 
-      /* ── Contacter (redirige vers la connexion si besoin) ── */
-      function contacter(proprietaireId, sId) {
+      /* ── Aller vers une page protégée : si on n'est pas connecté, on passe par la connexion
+     puis on revient automatiquement ici (voir redigerApresConnexion dans auth.js) ── */
+      function allerApresConnexion(cible) {
         if (!Session.estConnecte()) {
+          sessionStorage.setItem("sf_retour", cible);
           window.location.href = "auth.html?mode=connexion";
           return;
         }
-        window.location.href = `messages.html?to=${encodeURIComponent(proprietaireId)}&salon=${encodeURIComponent(sId)}`;
+        window.location.href = cible;
+      }
+
+      function reserver(id) {
+        allerApresConnexion(`reservation.html?id=${encodeURIComponent(id)}`);
+      }
+
+      function contacter(proprietaireId, sId) {
+        allerApresConnexion(
+          `messages.html?to=${encodeURIComponent(proprietaireId)}&salon=${encodeURIComponent(sId)}`,
+        );
       }
 
       /* ── Avis ── */
@@ -708,7 +720,8 @@
             </div>
           </div>
           <div class="detail-actions">
-            ${!isOwner && proprioId ? `<button class="btn btn-gold" onclick="contacter('${proprioId}','${s._id}')"><i class="ti ti-message-circle"></i> Contacter</button>` : ""}
+            ${!isOwner && user?.role !== "salon" ? `<button class="btn btn-gold" onclick="reserver('${s._id}')"><i class="ti ti-calendar-plus"></i> Réserver</button>` : ""}
+            ${!isOwner && proprioId ? `<button class="btn btn-glass" onclick="contacter('${proprioId}','${s._id}')"><i class="ti ti-message-circle"></i> Contacter</button>` : ""}
             ${
               !isOwner
                 ? `<button class="btn ${estFavori ? "btn-gold" : "btn-glass"} btn-sm" id="btn-favori" data-etat="${estFavori ? "oui" : "non"}" onclick="toggleFavori('${s._id}')">
