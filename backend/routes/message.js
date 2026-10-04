@@ -1,6 +1,6 @@
 "use strict";
 const router = require("express").Router();
-const ctrl = require("../controllers/messageController");
+const ctrl = require("../controllers/MessageController");
 const { proteger } = require("../middleware/auth");
 
 /* ⚠️  Routes statiques AVANT /:convId */
