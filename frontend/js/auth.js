@@ -53,17 +53,18 @@ function _chemin(rel) {
   return base + rel;
 }
 
-/* ── Redirection après connexion ─────────────────────────────── */
+/* /* ── Redirection après connexion ─────────────────────────────── */
 function redigerApresConnexion(user) {
   if (!user || typeof user.role === "undefined") {
     Session.clear();
     return;
   }
-  window.location.href =
-    user.role === "salon"
-      ? _chemin("/pages/dashboard-salon.html")
-      : _chemin("/pages/dashboard-client.html");
-}
+  // Prise en compte de "salon" ET "owner" pour les propriétaires
+  const estProprio = user.role === "salon" || user.role === "owner";
+  
+  window.location.href = estProprio
+    ? _chemin("/pages/dashboard-salon.html")
+    : _chemin("/pages/dashboard-client.html");
 
 /* ── Protection de page ──────────────────────────────────────── */
 function protegerPage(roleRequis = null) {
@@ -166,4 +167,4 @@ function afficherToast(msg, type = "info") {
   el._t = setTimeout(() => el.classList.remove("show"), 3500);
 }
 
-document.addEventListener("DOMContentLoaded", majNavbar);
+document.addEventListener("DOMContentLoaded", majNavbar)  
