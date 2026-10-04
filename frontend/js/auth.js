@@ -59,13 +59,12 @@ function redigerApresConnexion(user) {
     Session.clear();
     return;
   }
-  // Prise en compte de "salon" ET "owner" pour les propriétaires
-  const estProprio = user.role === "salon" || user.role === "owner";
-
-  window.location.href = estProprio
-    ? _chemin("/pages/dashboard-salon.html")
-    : _chemin("/pages/dashboard-client.html");
+  window.location.href =
+    user.role === "salon"
+      ? _chemin("/pages/dashboard-salon.html")
+      : _chemin("/pages/dashboard-client.html");
 }
+
 /* ── Protection de page ──────────────────────────────────────── */
 function protegerPage(roleRequis = null) {
   if (!Session.estConnecte()) {
@@ -91,11 +90,10 @@ function majNavbar() {
   if (!authEl) return;
 
   if (user) {
-    const estProprio = user.role === "salon" || user.role === "owner";
-    const dash = estProprio
-      ? _chemin("/pages/dashboard-salon.html")
-      : _chemin("/pages/dashboard-client.html");
-
+    const dash =
+      user.role === "salon"
+        ? _chemin("/pages/dashboard-salon.html")
+        : _chemin("/pages/dashboard-client.html");
     const nom = String(user.nom || "Mon espace");
     const initiale = nom[0].toUpperCase();
     const prenom = nom.split(" ")[0].replace(/[<>&"']/g, "");
@@ -126,6 +124,23 @@ function majNavbar() {
         <a href="${_chemin("/pages/auth.html")}?mode=connexion" class="btn btn-outline btn-full"><i class="ti ti-login"></i> Connexion</a>
         <a href="${_chemin("/pages/auth.html")}?mode=inscription" class="btn btn-gold btn-full"><i class="ti ti-user-plus"></i> Créer un compte</a>`;
   }
+}
+
+/* ── Badge messages non lus ──────────────────────────────────── */
+async function chargerNonLus() {
+  try {
+    // apiFetch renvoie déjà json.data : ça peut être un nombre ou {total}
+    const r = await Messages.nonLus();
+    const total =
+      typeof r === "number"
+        ? r
+        : Number(r?.total ?? r?.count ?? r?.nonLus ?? 0) || 0;
+    const badge = document.getElementById("notif-msg");
+    if (badge) {
+      badge.textContent = total > 9 ? "9+" : total;
+      badge.style.display = total > 0 ? "flex" : "none";
+    }
+  } catch {}
 }
 
 /* ── Déconnexion ─────────────────────────────────────────────── */
