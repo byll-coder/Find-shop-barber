@@ -4,16 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script>
-      /* Garde de connexion : s'exécute AVANT tout affichage (pas de flash de la page protégée) */
       (function () {
         try {
-          var requis = null; // rôle autorisé sur cette page (null = tout utilisateur connecté)
+          var requis = null;
           var t = localStorage.getItem("sf_v2_token");
           var u = JSON.parse(localStorage.getItem("sf_v2_user") || "null");
           var ok = !!t;
           if (ok) {
             try {
-              // un token expiré = déconnecté
               var p = JSON.parse(
                 atob(t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")),
               );
@@ -45,7 +43,6 @@
     <link rel="stylesheet" href="../css/styles.css" />
     <link rel="stylesheet" href="../css/animations.css" />
     <link rel="stylesheet" href="../css/message.css" />
-
     <style>
       body {
         overflow: hidden;
@@ -91,7 +88,6 @@
       <div class="mobile-menu-btns" id="mobile-auth"></div>
     </div>
 
-    <!-- Layout 2 colonnes -->
     <div class="msg-layout">
       <!-- SIDEBAR CONVERSATIONS -->
       <aside class="conv-sidebar">
@@ -128,14 +124,13 @@
           <i class="ti ti-message-circle-2"></i>
           <h3>Vos messages</h3>
           <p>Sélectionnez une conversation<br />ou contactez un salon.</p>
-          <a href="salons.html" class="btn btn-gold" style="margin-top: 20px"
-            ><i class="ti ti-scissors"></i> Voir les salons</a
+          <a href="salons.html" class="btn btn-gold" style="margin-top: 20px">
+            <i class="ti ti-scissors"></i> Voir les salons</a
           >
         </div>
       </div>
     </div>
 
-    <!-- Socket.IO CDN -->
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script src="../js/theme.js"></script>
     <script src="../js/api.js"></script>
@@ -145,11 +140,11 @@
     <script>
       let toutesConvs = [];
       let convActuelle = null;
-      let brouillon = null; // conversation voulue (?to=…&salon=…) mais pas encore créée : elle l'est au 1er message
-      let enAttente = []; // mes messages affichés tout de suite, en attente de confirmation du serveur
+      // FIX : brouillon enrichi avec nom + avatar + salonId pour l'affichage correct
+      let brouillon = null; // { to, salon, nom, avatar, salonId }
+      let enAttente = [];
 
-      /* ── Helpers ──
-     apiFetch renvoie déjà json.data : on accepte [..] ou {data:[..]} */
+      /* ── Helpers ── */
       const enListe = (res, cle) =>
         Array.isArray(res)
           ? res
@@ -204,7 +199,9 @@
         const el = document.getElementById("conv-list");
         convs = Array.isArray(convs) ? convs : [];
         if (!convs.length) {
-          el.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--txt3);"><i class="ti ti-message-off" style="font-size:2rem;display:block;margin-bottom:10px;"></i><p style="font-size:.84rem;">Aucune conversation.</p></div>`;
+          el.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--txt3);">
+            <i class="ti ti-message-off" style="font-size:2rem;display:block;margin-bottom:10px;"></i>
+            <p style="font-size:.84rem;">Aucune conversation.</p></div>`;
           return;
         }
         el.innerHTML = convs
@@ -216,17 +213,19 @@
             const lastMsg =
               c.dernierMessage?.contenu || "Démarrer la conversation…";
             const init = (autre?.nom || "?")[0].toUpperCase();
+            // FIX : avatar dans la liste — utilise photoCouverture ou avatar selon le champ dispo
+            const avatarSrc = autre?.avatar || autre?.photoCouverture || null;
             return `<div class="conv-item ${c._id === convActuelle ? "active" : ""}" data-id="${c._id}" onclick="ouvrirConv('${c._id}')">
-        <div class="conv-av">${autre?.avatar ? `<img src="${esc(autre.avatar)}" alt="">` : init}</div>
-        <div class="conv-info">
-          <p class="conv-name">${esc(autre?.nom || "Utilisateur")}</p>
-          <p class="conv-last">${esc(lastMsg.substring(0, 40))}${lastMsg.length > 40 ? "…" : ""}</p>
-        </div>
-        <div class="conv-meta">
-          <span class="conv-time">${dateCourtMsg(c.dernierMessageAt)}</span>
-          ${nonLus > 0 ? `<span class="conv-unread">${nonLus > 9 ? "9+" : nonLus}</span>` : ""}
-        </div>
-      </div>`;
+            <div class="conv-av">${avatarSrc ? `<img src="${esc(avatarSrc)}" alt="">` : init}</div>
+            <div class="conv-info">
+              <p class="conv-name">${esc(autre?.nom || "Utilisateur")}</p>
+              <p class="conv-last">${esc(lastMsg.substring(0, 40))}${lastMsg.length > 40 ? "…" : ""}</p>
+            </div>
+            <div class="conv-meta">
+              <span class="conv-time">${dateCourtMsg(c.dernierMessageAt)}</span>
+              ${nonLus > 0 ? `<span class="conv-unread">${nonLus > 9 ? "9+" : nonLus}</span>` : ""}
+            </div>
+          </div>`;
           })
           .join("");
       }
@@ -240,8 +239,6 @@
         );
       }
 
-      /* ── Charger les conversations
-     depuisURL = true UNIQUEMENT au premier chargement (sinon boucle infinie) ── */
       async function chargerConvs(depuisURL = false) {
         try {
           toutesConvs = enListe(
@@ -253,15 +250,14 @@
         } catch (err) {
           console.error("Conversations :", err);
           document.getElementById("conv-list").innerHTML = `
-        <div style="text-align:center;padding:40px 20px;color:var(--txt3);">
-          <p style="font-size:.84rem;">${esc(err.message || "Erreur de chargement")}</p>
-          <button class="btn btn-gold btn-sm" style="margin-top:12px" onclick="chargerConvs(true)">Réessayer</button>
-        </div>`;
+            <div style="text-align:center;padding:40px 20px;color:var(--txt3);">
+              <p style="font-size:.84rem;">${esc(err.message || "Erreur de chargement")}</p>
+              <button class="btn btn-gold btn-sm" style="margin-top:12px" onclick="chargerConvs(true)">Réessayer</button>
+            </div>`;
           afficherToast(err.message, "error");
         }
       }
 
-      /* ── Arrivée depuis une fiche salon : ?to=<proprietaire>&salon=<salon> ── */
       async function ouvrirDepuisURL() {
         const p = new URLSearchParams(window.location.search);
         if (p.get("conv")) return ouvrirConv(p.get("conv"));
@@ -277,26 +273,74 @@
         );
       }
 
+      /* ── FIX BUG 1 : demarrerConversation récupère maintenant les vraies infos ── */
       async function demarrerConversation(to, salon) {
         const existante = trouverConv(to, salon);
-        if (existante) return ouvrirConv(existante._id); // déjà en discussion : on la rouvre
-        let nom = "Nouvelle conversation";
+        if (existante) return ouvrirConv(existante._id);
+
+        // Valeurs par défaut
+        let nomAffiche = "Nouveau message";
+        let avatarAffiche = null;
+        let salonIdAffiche = salon || null;
+
+        // Récupérer les infos du salon pour l'affichage
         if (salon) {
           try {
             const r = await Salons.detail(salon);
-            nom = (r?.salon || r?.data?.salon || r?.data || r)?.nom || nom;
-          } catch {}
+            // apiFetch retourne déjà json.data, donc on normalise
+            const s = r?.salon || r?.data?.salon || r?.data || r;
+            if (s && s.nom) {
+              nomAffiche = s.nom;
+              // Utiliser la photo de couverture comme avatar de la conv brouillon
+              avatarAffiche = s.photoCouverture || s.logo || null;
+            }
+          } catch (e) {
+            console.warn(
+              "Impossible de charger le salon pour le brouillon :",
+              e,
+            );
+          }
         }
-        brouillon = { to, salon };
+
+        // Si on n'a toujours pas de nom (pas de salon), tenter via profil utilisateur
+        if (nomAffiche === "Nouveau message" && to) {
+          try {
+            // Essaie les routes courantes ; échoue silencieusement si inexistante
+            const u = await apiFetch(`/users/${to}`);
+            const user = u?.user || u?.data || u;
+            if (user?.nom) {
+              nomAffiche = user.nom;
+              avatarAffiche = user.avatar || null;
+            }
+          } catch (e) {
+            // Route /users/:id peut ne pas exister — pas grave
+          }
+        }
+
+        // Stocker toutes les infos dans le brouillon pour pouvoir les réutiliser
+        brouillon = {
+          to,
+          salon,
+          nom: nomAffiche,
+          avatar: avatarAffiche,
+          salonId: salonIdAffiche,
+        };
         convActuelle = null;
-        afficherChat({ nom, salonId: salon, msgs: [], convId: null });
+
+        afficherChat({
+          nom: nomAffiche,
+          avatar: avatarAffiche,
+          salonId: salonIdAffiche,
+          msgs: [],
+          convId: null,
+        });
+
         document
           .getElementById("msg-input")
           ?.setAttribute("placeholder", "Écrivez votre premier message…");
       }
 
       async function creerConversation(to, salon) {
-        // ⚠ route à confirmer côté backend (POST /api/messages/conversations) — plusieurs noms de champs sont envoyés par prudence
         return apiFetch("/messages/conversations", {
           method: "POST",
           body: JSON.stringify({
@@ -311,50 +355,77 @@
 
       /* ── Messages ── */
       function renderMsg(msg, isMine) {
+        // FIX : utiliser avatar ou photoCouverture selon ce qui est disponible
+        const avatarSrc =
+          msg.expediteur?.avatar || msg.expediteur?.photoCouverture || null;
         const init = (msg.expediteur?.nom || "?")[0].toUpperCase();
         return `<div class="msg-group ${isMine ? "mine" : ""}">
-      ${!isMine ? `<div class="msg-ava">${msg.expediteur?.avatar ? `<img src="${esc(msg.expediteur.avatar)}" alt="">` : init}</div>` : ""}
-      <div>
-        <div class="msg-bubble">${esc(msg.contenu)}</div>
-        <p class="msg-time">${dateCourtMsg(msg.createdAt)}</p>
-      </div>
-    </div>`;
+          ${
+            !isMine
+              ? `<div class="msg-ava">${
+                  avatarSrc ? `<img src="${esc(avatarSrc)}" alt="">` : init
+                }</div>`
+              : ""
+          }
+          <div>
+            <div class="msg-bubble">${esc(msg.contenu)}</div>
+            <p class="msg-time">${dateCourtMsg(msg.createdAt)}</p>
+          </div>
+        </div>`;
       }
 
       function afficherChat({ nom, avatar, salonId, msgs, convId }) {
         const initA = (nom || "?")[0].toUpperCase();
+        // FIX : afficher l'avatar (image) si disponible, sinon initiale
+        const avatarHtml = avatar
+          ? `<img src="${esc(avatar)}" alt="${esc(nom)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+          : initA;
+
         document.getElementById("chat-zone").innerHTML = `
-      <div class="chat-header">
-        <div class="conv-av" style="flex-shrink:0;">${avatar ? `<img src="${esc(avatar)}" alt="">` : initA}</div>
-        <div style="flex:1;">
-          <p class="chat-header-name">${esc(nom || "Utilisateur")}</p>
-          <p class="chat-header-status" id="user-status"><span class="online-dot"></span> En ligne</p>
-        </div>
-        ${salonId ? `<a href="salon-detail.html?id=${esc(idDe(salonId))}" class="btn btn-glass btn-sm"><i class="ti ti-scissors"></i> Voir le salon</a>` : ""}
-      </div>
-
-      <div class="chat-messages" id="chat-messages">
-        ${
-          msgs.length
-            ? msgs.map((m) => renderMsg(m, estMoi(m))).join("")
-            : `<div class="msg-vide" style="text-align:center;padding:40px;color:var(--txt3);"><i class="ti ti-message-circle" style="font-size:2rem;display:block;margin-bottom:8px;"></i><p style="font-size:.84rem;">Début de la conversation</p></div>`
-        }
-        <div id="typing-wrap" style="display:none;">
-          <div class="msg-group">
-            <div class="conv-av" style="width:28px;height:28px;">${initA}</div>
-            <div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>
+          <div class="chat-header">
+            <div class="conv-av" style="flex-shrink:0;">${avatarHtml}</div>
+            <div style="flex:1;">
+              <p class="chat-header-name">${esc(nom || "Utilisateur")}</p>
+              <p class="chat-header-status" id="user-status">
+                <span class="online-dot"></span> En ligne</p>
+            </div>
+            ${
+              salonId
+                ? `<a href="salon-detail.html?id=${esc(idDe(salonId))}" class="btn btn-glass btn-sm">
+              <i class="ti ti-scissors"></i> Voir le salon</a>`
+                : ""
+            }
           </div>
-        </div>
-      </div>
 
-      <div class="chat-input-zone">
-        <div class="chat-input-row">
-          <input type="text" id="msg-input" placeholder="Écrivez un message…"
-            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();envoyerMsg();}"
-            ${convId ? `oninput="try{Socket.startTyping('${convId}')}catch(e){}"` : ""}/>
-          <button class="btn-send" id="btn-send" onclick="envoyerMsg()"><i class="ti ti-send"></i></button>
-        </div>
-      </div>`;
+          <div class="chat-messages" id="chat-messages">
+            ${
+              msgs.length
+                ? msgs.map((m) => renderMsg(m, estMoi(m))).join("")
+                : `<div class="msg-vide" style="text-align:center;padding:40px;color:var(--txt3);">
+                  <i class="ti ti-message-circle" style="font-size:2rem;display:block;margin-bottom:8px;"></i>
+                  <p style="font-size:.84rem;">Début de la conversation</p></div>`
+            }
+            <div id="typing-wrap" style="display:none;">
+              <div class="msg-group">
+                <div class="conv-av" style="width:28px;height:28px;">${avatarHtml}</div>
+                <div class="typing-indicator">
+                  <div class="typing-dot"></div>
+                  <div class="typing-dot"></div>
+                  <div class="typing-dot"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="chat-input-zone">
+            <div class="chat-input-row">
+              <input type="text" id="msg-input" placeholder="Écrivez un message…"
+                onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();envoyerMsg();}"
+                ${convId ? `oninput="try{Socket.startTyping('${convId}')}catch(e){}"` : ""}/>
+              <button class="btn-send" id="btn-send" onclick="envoyerMsg()">
+                <i class="ti ti-send"></i></button>
+            </div>
+          </div>`;
         scrollBas();
         document.getElementById("msg-input")?.focus();
       }
@@ -379,14 +450,16 @@
           const msgs = enListe(await Messages.getMessages(convId), "messages");
           const conv = toutesConvs.find((c) => c._id === convId);
           const autre = autreParticipant(conv);
+          // FIX : chercher avatar dans tous les champs possibles
+          const avatarSrc = autre?.avatar || autre?.photoCouverture || null;
           afficherChat({
             nom: autre?.nom,
-            avatar: autre?.avatar,
+            avatar: avatarSrc,
             salonId: conv?.salon,
             msgs,
             convId,
           });
-          chargerConvs(); // rafraîchit les non-lus, SANS rouvrir la conversation
+          chargerConvs();
         } catch (err) {
           console.error("Messages :", err);
           afficherToast(err.message, "error");
@@ -398,7 +471,7 @@
         const container = document.getElementById("chat-messages");
         const typing = document.getElementById("typing-wrap");
         if (!container) return null;
-        container.querySelector(".msg-vide")?.remove(); // le « Début de la conversation » disparaît au 1er message
+        container.querySelector(".msg-vide")?.remove();
         const el = document.createElement("div");
         el.innerHTML = renderMsg(msg, isMine);
         const noeud = el.firstElementChild;
@@ -417,12 +490,10 @@
         const contenu = input?.value.trim();
         if (!contenu) return;
 
-        /* Première fois : on crée la conversation, puis on envoie le message */
         if (!convActuelle && brouillon) return premierMessage(contenu, input);
         if (!convActuelle) return;
 
         input.value = "";
-        // le message s'affiche tout de suite (même si le serveur ne renvoie pas d'écho à l'expéditeur)
         const noeud = appendMsg(
           { contenu, createdAt: new Date().toISOString(), expediteur: moi() },
           true,
@@ -480,8 +551,7 @@
             const i = estMoi(msg)
               ? enAttente.findIndex((p) => p.contenu === msg.contenu)
               : -1;
-            if (i >= 0)
-              enAttente.splice(i, 1); // écho de mon propre message déjà affiché : pas de doublon
+            if (i >= 0) enAttente.splice(i, 1);
             else appendMsg(msg, estMoi(msg));
             scrollBas();
           }
@@ -514,7 +584,7 @@
           Socket.connect();
           initSocketEvents();
         } catch (e) {
-          console.warn("Socket non initialisé :", e); // les messages marchent quand même en HTTP
+          console.warn("Socket non initialisé :", e);
         }
         chargerConvs(true);
       });

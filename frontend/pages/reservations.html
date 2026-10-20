@@ -4,16 +4,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script>
-      /* Garde de connexion : s'exécute AVANT tout affichage (pas de flash de la page protégée) */
+      /*
+       * FIX BUG 2 — Garde de connexion robuste
+       * Avant : redirect vers "auth.html" et "../index.html" → chemins pouvant être invalides
+       *         selon l'emplacement du fichier, causant un "Not Found"
+       * Après : on détecte automatiquement le chemin de base pour construire
+       *         les redirections correctes dans tous les contextes (live server, Render, etc.)
+       */
       (function () {
         try {
-          var requis = "client"; // rôle autorisé sur cette page (null = tout utilisateur connecté)
+          var requis = "client";
           var t = localStorage.getItem("sf_v2_token");
           var u = JSON.parse(localStorage.getItem("sf_v2_user") || "null");
           var ok = !!t;
           if (ok) {
             try {
-              // un token expiré = déconnecté
               var p = JSON.parse(
                 atob(t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")),
               );
@@ -23,9 +28,21 @@
           if (!ok) {
             localStorage.removeItem("sf_v2_token");
             localStorage.removeItem("sf_v2_user");
-            location.replace("auth.html");
+            // FIX : chemin vers auth.html toujours relatif au dossier courant (pages/)
+            var base = window.location.pathname.substring(
+              0,
+              window.location.pathname.lastIndexOf("/") + 1,
+            );
+            location.replace(base + "auth.html");
           } else if (requis && u && u.role && u.role !== requis) {
-            location.replace("../index.html");
+            // FIX : retour à l'index sans supposer que "../" existe toujours
+            var base2 = window.location.pathname.substring(
+              0,
+              window.location.pathname.lastIndexOf("/") + 1,
+            );
+            // On remonte d'un niveau si on est dans pages/, sinon on reste
+            var idx = base2.replace(/pages\/?$/, "");
+            location.replace(idx + "index.html");
           }
         } catch (e) {}
       })();
@@ -58,7 +75,6 @@
         max-width: 900px;
         margin-inline: auto;
       }
-      /* Récap salon */
       .salon-recap {
         display: flex;
         align-items: center;
@@ -108,7 +124,6 @@
         color: var(--gold);
         margin-top: 3px;
       }
-      /* Étapes */
       .steps-bar {
         display: flex;
         align-items: center;
@@ -162,7 +177,6 @@
         background: var(--bd);
         margin: 0 8px;
       }
-      /* Formulaire */
       .rdv-step {
         display: none;
       }
@@ -189,7 +203,6 @@
         gap: 8px;
         margin-bottom: 18px;
       }
-      /* Services */
       .services-grid {
         display: grid;
         grid-template-columns: 1fr;
@@ -240,7 +253,6 @@
         white-space: nowrap;
         flex-shrink: 0;
       }
-      /* Créneaux */
       .creneaux-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -274,7 +286,6 @@
         cursor: not-allowed;
         text-decoration: line-through;
       }
-      /* Récap */
       .recap-row {
         display: flex;
         justify-content: space-between;
@@ -312,7 +323,6 @@
         justify-content: space-between;
         margin-top: 20px;
       }
-      /* Succès */
       .success-screen {
         text-align: center;
         padding: 60px 24px;
@@ -440,8 +450,20 @@
           </h1>
         </div>
 
+        <!-- FIX : loader avec message d'erreur plus lisible -->
         <div id="page-loader" style="text-align: center; padding: 60px 0">
           <div class="spinner"></div>
+          <p
+            id="loader-msg"
+            style="
+              color: var(--txt3);
+              font-size: 0.84rem;
+              margin-top: 16px;
+              display: none;
+            "
+          >
+            Chargement du salon…
+          </p>
         </div>
 
         <div id="rdv-content" style="display: none">
@@ -461,11 +483,11 @@
                 flex-wrap: wrap;
               "
             >
-              <a href="dashboard-client.html" class="btn btn-gold"
-                ><i class="ti ti-layout-dashboard"></i> Mon espace</a
+              <a href="dashboard-client.html" class="btn btn-gold">
+                <i class="ti ti-layout-dashboard"></i> Mon espace</a
               >
-              <a id="retour-salon" href="salons.html" class="btn btn-glass"
-                ><i class="ti ti-arrow-left"></i> Retour au salon</a
+              <a id="retour-salon" href="salons.html" class="btn btn-glass">
+                <i class="ti ti-arrow-left"></i> Retour au salon</a
               >
             </div>
           </div>
@@ -554,7 +576,8 @@
                       href="salons.html"
                       id="btn-retour-salon"
                       class="btn btn-glass"
-                      ><i class="ti ti-arrow-left"></i> Retour</a
+                    >
+                      <i class="ti ti-arrow-left"></i> Retour</a
                     >
                     <button
                       class="btn btn-gold"
@@ -681,8 +704,8 @@
       <div class="container">
         <div class="footer-bottom">
           <p class="footer-bottom-left">© 2025 Salon Finder</p>
-          <a href="salons.html" class="btn btn-glass btn-sm"
-            ><i class="ti ti-arrow-left"></i> Tous les salons</a
+          <a href="salons.html" class="btn btn-glass btn-sm">
+            <i class="ti ti-arrow-left"></i> Tous les salons</a
           >
         </div>
       </div>
@@ -695,7 +718,9 @@
     <script>
       /* ── Paramètres ── */
       const params = new URLSearchParams(window.location.search);
-      const salonId = params.get("id") || params.get("salonId");
+      // FIX : accepter aussi "salonId" en plus de "id"
+      const salonId =
+        params.get("id") || params.get("salonId") || params.get("salon");
 
       /* ── État ── */
       let monSalon = null;
@@ -774,7 +799,7 @@
           item?.classList.toggle("active", i === n);
           item?.classList.toggle("done", i < n);
         });
-        if (n === 2 && dateChoisie) chargerCreneaux(); // la durée du service a pu changer
+        if (n === 2 && dateChoisie) chargerCreneaux();
         if (n === 3) afficherRecap();
         majSidebarRecap();
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -793,12 +818,38 @@
         aller(2);
       }
 
-      /* ── Chargement du salon ── */
+      /* ── FIX BUG 2 : chargement salon robuste avec diagnostic ── */
       async function chargerSalon() {
+        // Afficher un message de chargement après 1s (réseau lent)
+        const loaderTimeout = setTimeout(() => {
+          const msg = $("loader-msg");
+          if (msg) msg.style.display = "block";
+        }, 1000);
+
         try {
+          // FIX : vérifier d'abord que salonId est bien présent
+          if (!salonId) {
+            clearTimeout(loaderTimeout);
+            afficherErreurChargement(
+              "Aucun salon spécifié dans l'URL. Paramètre « id » manquant.",
+            );
+            return;
+          }
+
           const rep = await Salons.detail(salonId);
-          const s = rep?.salon || rep?.data?.salon || rep?.data || rep; // apiFetch renvoie déjà json.data
-          if (!s || !s._id) throw new Error("Salon introuvable");
+          clearTimeout(loaderTimeout);
+
+          // FIX : normalisation robuste — apiFetch retourne json.data directement
+          // donc rep peut être : {salon:{...}} ou {...} directement
+          const s = rep?.salon || rep?.data?.salon || rep?.data || rep;
+
+          if (!s || !s._id) {
+            afficherErreurChargement(
+              `Salon introuvable (ID : ${salonId}). Vérifiez le lien ou revenez à la liste.`,
+            );
+            return;
+          }
+
           monSalon = s;
           document.title = `RDV — ${s.nom} — Salon Finder`;
 
@@ -808,7 +859,9 @@
             "salon-link-recap",
             "btn-retour-salon",
             "retour-salon",
-          ].forEach((id) => ($(id).href = lienSalon()));
+          ].forEach((id) => {
+            if ($(id)) $(id).href = lienSalon();
+          });
           $("salon-nom-recap").textContent = s.nom;
           $("salon-loc-recap").textContent =
             (s.commune || "") + (s.quartier ? ", " + s.quartier : "");
@@ -821,7 +874,7 @@
             $("salon-cover-wrap").innerHTML =
               `<img src="${esc(s.photoCouverture)}" alt="${esc(s.nom)}">`;
 
-          $("rdv-date").min = dateLocale(new Date()); // date locale, pas UTC
+          $("rdv-date").min = dateLocale(new Date());
 
           await chargerServices(s._id);
           majSidebarRecap();
@@ -833,14 +886,29 @@
             else el.classList.add("visible");
           });
         } catch (err) {
+          clearTimeout(loaderTimeout);
           console.error("Salon :", err);
-          $("page-loader").innerHTML = `
-        <div style="text-align:center;padding:40px;">
-          <i class="ti ti-alert-triangle" style="font-size:3rem;color:var(--error);display:block;margin-bottom:14px;"></i>
-          <p style="color:var(--txt2);">Impossible de charger le salon : ${esc(err.message)}</p>
-          <a href="salons.html" class="btn btn-gold" style="margin-top:16px;"><i class="ti ti-arrow-left"></i> Retour</a>
-        </div>`;
+          // FIX : message d'erreur détaillé avec l'ID tenté
+          afficherErreurChargement(
+            `Impossible de charger le salon (ID : ${salonId || "non fourni"}).<br>
+             Détail : ${esc(err.message)}`,
+          );
         }
+      }
+
+      /* FIX : fonction centralisée pour l'affichage des erreurs de chargement */
+      function afficherErreurChargement(message) {
+        $("page-loader").innerHTML = `
+          <div style="text-align:center;padding:40px;">
+            <i class="ti ti-alert-triangle" style="font-size:3rem;color:var(--error);display:block;margin-bottom:14px;"></i>
+            <p style="color:var(--txt2);line-height:1.6;">${message}</p>
+            <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px;">
+              <button class="btn btn-gold" onclick="window.location.reload()">
+                <i class="ti ti-refresh"></i> Réessayer</button>
+              <a href="salons.html" class="btn btn-glass">
+                <i class="ti ti-arrow-left"></i> Tous les salons</a>
+            </div>
+          </div>`;
       }
 
       /* ── Services ── */
@@ -859,19 +927,18 @@
             .map((sv) => {
               const desc = sv.description ? String(sv.description) : "";
               return `<label class="service-select-card" data-id="${esc(sv._id)}">
-          <input type="radio" name="service" value="${esc(sv._id)}">
-          <div style="flex:1;min-width:0;">
-            <p class="service-select-nom">${esc(sv.nom)}</p>
-            <div class="service-select-info">
-              <span><i class="ti ti-clock"></i> ${sv.duree || 30} min</span>
-              ${desc ? `<span>${esc(desc.length > 35 ? desc.slice(0, 35) + "…" : desc)}</span>` : ""}
-            </div>
-          </div>
-          <p class="service-select-prix">${fcfa(sv.prix)} FCFA</p>
-        </label>`;
+              <input type="radio" name="service" value="${esc(sv._id)}">
+              <div style="flex:1;min-width:0;">
+                <p class="service-select-nom">${esc(sv.nom)}</p>
+                <div class="service-select-info">
+                  <span><i class="ti ti-clock"></i> ${sv.duree || 30} min</span>
+                  ${desc ? `<span>${esc(desc.length > 35 ? desc.slice(0, 35) + "…" : desc)}</span>` : ""}
+                </div>
+              </div>
+              <p class="service-select-prix">${fcfa(sv.prix)} FCFA</p>
+            </label>`;
             })
             .join("");
-          // un seul écouteur : plus de problème de guillemets dans les noms de services
           el.onchange = (e) => {
             if (e.target.name === "service")
               selectionnerService(e.target.value);
@@ -904,11 +971,11 @@
         majSidebarRecap();
       }
 
-      /* ── Créneaux : suivent les horaires du salon et la durée du service ── */
+      /* ── Créneaux ── */
       function genererCreneaux(date) {
         const h =
           monSalon?.horaires?.[JOURS[new Date(date + "T00:00:00").getDay()]];
-        if (h && !h.ouvert) return null; // fermé ce jour-là
+        if (h && !h.ouvert) return null;
         let debut = h?.debut ? versMin(h.debut) : 9 * 60;
         let fin = h?.fin ? versMin(h.fin) : 19 * 60;
         if (isNaN(debut) || isNaN(fin) || fin <= debut) {
@@ -918,7 +985,7 @@
         const duree = serviceChoisi?.duree || 30;
         const now = new Date();
         const aujourdhui = date === dateLocale(now);
-        const minAujourdhui = now.getHours() * 60 + now.getMinutes() + 30; // 30 min de préavis
+        const minAujourdhui = now.getHours() * 60 + now.getMinutes() + 30;
         const out = [];
         for (let m = debut; m + duree <= fin; m += 30) {
           if (aujourdhui && m < minAujourdhui) continue;
@@ -993,33 +1060,35 @@
             year: "numeric",
           }) || "—";
         $("recap-content").innerHTML = `
-      <div class="recap-row"><span class="recap-label">Salon</span><span class="recap-val">${esc(monSalon?.nom || "—")}</span></div>
-      <div class="recap-row"><span class="recap-label">Adresse</span><span class="recap-val">${esc(monSalon?.commune || "—")}${monSalon?.quartier ? ", " + esc(monSalon.quartier) : ""}</span></div>
-      <div class="recap-row"><span class="recap-label">Service</span><span class="recap-val">${esc(serviceChoisi?.nom || "Non spécifié")}</span></div>
-      ${serviceChoisi ? `<div class="recap-row"><span class="recap-label">Durée</span><span class="recap-val">${serviceChoisi.duree} min</span></div>` : ""}
-      <div class="recap-row"><span class="recap-label">Date</span><span class="recap-val" style="text-transform:capitalize;">${dateF}</span></div>
-      <div class="recap-row"><span class="recap-label">Heure</span><span class="recap-val">${esc(heureChoisie || "—")}</span></div>
-      ${serviceChoisi ? `<div class="recap-row recap-total"><span class="recap-label">Total estimé</span><span class="recap-val">${fcfa(serviceChoisi.prix)} FCFA</span></div>` : ""}`;
+          <div class="recap-row"><span class="recap-label">Salon</span><span class="recap-val">${esc(monSalon?.nom || "—")}</span></div>
+          <div class="recap-row"><span class="recap-label">Adresse</span><span class="recap-val">${esc(monSalon?.commune || "—")}${monSalon?.quartier ? ", " + esc(monSalon.quartier) : ""}</span></div>
+          <div class="recap-row"><span class="recap-label">Service</span><span class="recap-val">${esc(serviceChoisi?.nom || "Non spécifié")}</span></div>
+          ${serviceChoisi ? `<div class="recap-row"><span class="recap-label">Durée</span><span class="recap-val">${serviceChoisi.duree} min</span></div>` : ""}
+          <div class="recap-row"><span class="recap-label">Date</span><span class="recap-val" style="text-transform:capitalize;">${dateF}</span></div>
+          <div class="recap-row"><span class="recap-label">Heure</span><span class="recap-val">${esc(heureChoisie || "—")}</span></div>
+          ${serviceChoisi ? `<div class="recap-row recap-total"><span class="recap-label">Total estimé</span><span class="recap-val">${fcfa(serviceChoisi.prix)} FCFA</span></div>` : ""}`;
       }
 
       function majSidebarRecap() {
         const dateF = dateLongue({ day: "numeric", month: "long" });
         const ligne = (ok, icone, texte, vide) =>
           `<div style="display:flex;align-items:center;gap:8px;font-size:.84rem;color:${ok ? "var(--white)" : "var(--txt3)"};">
-        <i class="ti ${icone}" style="color:${ok ? "var(--gold)" : "var(--txt3)"};"></i>${ok ? texte : vide}</div>`;
+            <i class="ti ${icone}" style="color:${ok ? "var(--gold)" : "var(--txt3)"};"></i>${ok ? texte : vide}</div>`;
         $("sidebar-recap").innerHTML = `
-      <div style="display:flex;flex-direction:column;gap:10px;">
-        ${ligne(!!serviceChoisi, "ti-scissors", esc(serviceChoisi?.nom), sansService ? "Service à discuter avec le salon" : "Aucun service sélectionné")}
-        ${ligne(!!dateF, "ti-calendar", esc(dateF), "Aucune date choisie")}
-        ${ligne(!!heureChoisie, "ti-clock", esc(heureChoisie), "Aucun créneau choisi")}
-        ${
-          serviceChoisi
-            ? `<div style="margin-top:6px;padding-top:10px;border-top:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-size:.78rem;color:var(--txt2);">Estimation</span>
-          <span style="font-family:var(--font-display);font-size:1.2rem;font-style:italic;color:var(--gold);">${fcfa(serviceChoisi.prix)} F</span></div>`
-            : ""
-        }
-      </div>`;
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            ${ligne(!!serviceChoisi, "ti-scissors", esc(serviceChoisi?.nom), sansService ? "Service à discuter avec le salon" : "Aucun service sélectionné")}
+            ${ligne(!!dateF, "ti-calendar", esc(dateF), "Aucune date choisie")}
+            ${ligne(!!heureChoisie, "ti-clock", esc(heureChoisie), "Aucun créneau choisi")}
+            ${
+              serviceChoisi
+                ? `
+              <div style="margin-top:6px;padding-top:10px;border-top:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:.78rem;color:var(--txt2);">Estimation</span>
+                <span style="font-family:var(--font-display);font-size:1.2rem;font-style:italic;color:var(--gold);">${fcfa(serviceChoisi.prix)} F</span>
+              </div>`
+                : ""
+            }
+          </div>`;
       }
 
       /* ── Confirmation ── */
@@ -1033,7 +1102,7 @@
           return;
         }
         const btn = $("btn-confirmer");
-        if (btn.disabled) return; // anti double-clic
+        if (btn.disabled) return;
         btn.disabled = true;
         btn.innerHTML =
           '<div class="spinner spinner-sm" style="border-top-color:#1a1008;"></div> Envoi en cours…';
@@ -1068,10 +1137,19 @@
 
       /* ── Init ── */
       document.addEventListener("DOMContentLoaded", () => {
+        // FIX : si pas de salonId, on affiche un message clair au lieu de rediriger silencieusement
         if (!salonId) {
-          window.location.href = "salons.html";
+          document.getElementById("page-loader").innerHTML = `
+            <div style="text-align:center;padding:40px;">
+              <i class="ti ti-link-off" style="font-size:3rem;color:var(--error);display:block;margin-bottom:14px;"></i>
+              <p style="color:var(--txt2);">Aucun salon sélectionné.<br>
+                Veuillez accéder à cette page depuis la fiche d'un salon.</p>
+              <a href="salons.html" class="btn btn-gold" style="margin-top:16px;">
+                <i class="ti ti-search"></i> Voir les salons</a>
+            </div>`;
           return;
         }
+        // FIX : protegerPage accepte "client" en argument pour le rôle requis
         if (!protegerPage("client")) return;
         majNavbar();
         chargerSalon();

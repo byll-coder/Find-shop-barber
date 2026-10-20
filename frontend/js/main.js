@@ -6,14 +6,25 @@
 /* ── Scroll Reveal ───────────────────────────────────────────── */
 const rvObs = new IntersectionObserver(
   (entries) => {
+    let i = 0;
     entries.forEach((en) => {
       if (en.isIntersecting) {
+        /* Stagger de 65ms par carte dans le même batch */
+        en.target.style.transitionDelay = `${i * 65}ms`;
         en.target.classList.add("visible");
         rvObs.unobserve(en.target);
+        /* Reset le delay après l'animation pour pas bloquer les re-renders */
+        setTimeout(
+          () => {
+            en.target.style.transitionDelay = "";
+          },
+          700 + i * 65,
+        );
+        i++;
       }
     });
   },
-  { threshold: 0.08, rootMargin: "0px 0px -40px 0px" },
+  { threshold: 0.05, rootMargin: "0px 0px -20px 0px" },
 );
 
 /* ── Splash Screen ───────────────────────────────────────────── */
