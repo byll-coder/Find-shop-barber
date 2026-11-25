@@ -219,6 +219,7 @@
       // brouillon enrichi avec nom + avatar + salonId pour l'affichage correct
       let brouillon = null; // { to, salon, nom, avatar, salonId }
       let enAttente = [];
+      let identiteChat = null; // { nom, avatar } de l'interlocuteur affiché
 
       /* ── Helpers ── */
       const enListe = (res, cle) =>
@@ -270,6 +271,87 @@
         c?.participants?.find((p) => idDe(p) !== moi()._id) ||
         c?.participants?.[0];
 
+      /* ── FIX PHOTO DU SALON : identité affichée d'une conversation ──
+         Le participant d'une conversation est le COMPTE du propriétaire (User),
+         qui n'a généralement pas de photo. Quand on écrit à un salon, on affiche
+         donc le nom + la photo du SALON ; sinon la photo du brouillon disparaît
+         dès que la vraie conversation s'ouvre après l'envoi du message. */
+      const cacheSalons = {}; // salonId -> { id, nom, avatar, proprio }
+      const salonParProprio = {}; // id du propriétaire -> info du salon
+      const salonsEchec = new Set();
+      let proprioAvertissement = false;
+
+      function memoriserSalon(id, s, proprioParDefaut) {
+        if (!s?.nom) return null;
+        const sid = id || s._id;
+        const champ =
+          s.proprietaire ?? s.owner ?? s.user ?? s.utilisateur ?? s.createur;
+        const info = {
+          id: sid,
+          nom: s.nom,
+          avatar: s.photoCouverture || s.logo || null,
+          proprio:
+            idDe(champ) ||
+            proprioParDefaut ||
+            cacheSalons[sid]?.proprio ||
+            null,
+        };
+        if (!info.proprio && !proprioAvertissement) {
+          proprioAvertissement = true;
+          console.warn(
+            "Propriétaire du salon introuvable, champs reçus :",
+            Object.keys(s),
+          );
+        }
+        cacheSalons[sid] = info;
+        if (info.proprio) salonParProprio[info.proprio] = info;
+        return info;
+      }
+
+      function infoSalonDe(c) {
+        const sal = c?.salon;
+        if (sal && typeof sal === "object" && sal.nom)
+          return memoriserSalon(sal._id, sal);
+        return cacheSalons[idDe(sal)] || null;
+      }
+
+      async function chargerInfosSalons(convs) {
+        const liste = (convs || []).filter(Boolean);
+        liste.forEach((c) => infoSalonDe(c)); // salons déjà peuplés par le backend
+        const ids = [
+          ...new Set(liste.map((c) => idDe(c.salon)).filter(Boolean)),
+        ].filter((id) => !cacheSalons[id] && !salonsEchec.has(id));
+        await Promise.all(
+          ids.map(async (id) => {
+            try {
+              const r = await Salons.detail(id);
+              const s = r?.salon || r?.data?.salon || r?.data || r;
+              if (!memoriserSalon(id, s)) salonsEchec.add(id);
+            } catch (e) {
+              salonsEchec.add(id);
+            }
+          }),
+        );
+        return ids.some((id) => cacheSalons[id]);
+      }
+
+      function identiteConv(c) {
+        const autre = autreParticipant(c);
+        const autreId = idDe(autre);
+        const info = infoSalonDe(c) || salonParProprio[autreId] || null;
+        // Identité du salon seulement si l'interlocuteur en est le propriétaire
+        // (si c'est le propriétaire qui regarde, l'interlocuteur est un client
+        // → on garde les infos du client).
+        const auSalon = !!(info && info.proprio && info.proprio === autreId);
+        return {
+          nom: auSalon ? info.nom : autre?.nom || "Utilisateur",
+          avatar: auSalon
+            ? info.avatar || autre?.avatar || null
+            : autre?.avatar || autre?.photoCouverture || null,
+          salonId: idDe(c?.salon) || (auSalon ? info.id : null),
+        };
+      }
+
       /* ── FIX RESPONSIVE : hauteur exacte du layout sur mobile ──
          100vh inclut la barre d'adresse du navigateur mobile, ce qui
          coupe le bas de la page (donc le champ d'envoi). On calcule
@@ -311,13 +393,13 @@
               : 0;
             const lastMsg =
               c.dernierMessage?.contenu || "Démarrer la conversation…";
-            const init = (autre?.nom || "?")[0].toUpperCase();
-            // avatar dans la liste — utilise avatar ou photoCouverture selon le champ dispo
-            const avatarSrc = autre?.avatar || autre?.photoCouverture || null;
+            const ident = identiteConv(c);
+            const init = (ident.nom || "?")[0].toUpperCase();
+            const avatarSrc = ident.avatar;
             return `<div class="conv-item ${c._id === convActuelle ? "active" : ""}" data-id="${c._id}" onclick="ouvrirConv('${c._id}')">
             <div class="conv-av">${avatarSrc ? `<img src="${esc(avatarSrc)}" alt="">` : init}</div>
             <div class="conv-info">
-              <p class="conv-name">${esc(autre?.nom || "Utilisateur")}</p>
+              <p class="conv-name">${esc(ident.nom || "Utilisateur")}</p>
               <p class="conv-last">${esc(lastMsg.substring(0, 40))}${lastMsg.length > 40 ? "…" : ""}</p>
             </div>
             <div class="conv-meta">
@@ -333,7 +415,7 @@
         const q = document.getElementById("search-conv").value.toLowerCase();
         renderConvs(
           toutesConvs.filter((c) =>
-            (autreParticipant(c)?.nom || "").toLowerCase().includes(q),
+            (identiteConv(c).nom || "").toLowerCase().includes(q),
           ),
         );
       }
@@ -345,6 +427,10 @@
             "conversations",
           );
           renderConvs(toutesConvs);
+          // charge nom/photo des salons concernés, puis réaffiche la liste
+          chargerInfosSalons(toutesConvs).then((maj) => {
+            if (maj) filtrerConvs();
+          });
           if (depuisURL) await ouvrirDepuisURL();
         } catch (err) {
           console.error("Conversations :", err);
@@ -389,6 +475,7 @@
             // apiFetch retourne déjà json.data, donc on normalise
             const s = r?.salon || r?.data?.salon || r?.data || r;
             if (s && s.nom) {
+              memoriserSalon(salon, s, to); // `to` = propriétaire du salon
               nomAffiche = s.nom;
               // Utiliser la photo de couverture comme avatar de la conv brouillon
               avatarAffiche = s.photoCouverture || s.logo || null;
@@ -459,9 +546,15 @@
       /* ── Messages ── */
       function renderMsg(msg, isMine) {
         // utiliser avatar ou photoCouverture selon ce qui est disponible
+        // messages de l'interlocuteur : on réutilise son identité affichée (photo du salon)
         const avatarSrc =
-          msg.expediteur?.avatar || msg.expediteur?.photoCouverture || null;
-        const init = (msg.expediteur?.nom || "?")[0].toUpperCase();
+          (!isMine && identiteChat?.avatar) ||
+          msg.expediteur?.avatar ||
+          msg.expediteur?.photoCouverture ||
+          null;
+        const init = ((!isMine && identiteChat?.nom) ||
+          msg.expediteur?.nom ||
+          "?")[0].toUpperCase();
         return `<div class="msg-group ${isMine ? "mine" : ""}">
           ${
             !isMine
@@ -478,6 +571,7 @@
       }
 
       function afficherChat({ nom, avatar, salonId, msgs, convId }) {
+        identiteChat = { nom, avatar };
         const initA = (nom || "?")[0].toUpperCase();
         // afficher l'avatar (image) si disponible, sinon initiale
         const avatarHtml = avatar
@@ -562,13 +656,12 @@
         try {
           const msgs = enListe(await Messages.getMessages(convId), "messages");
           const conv = toutesConvs.find((c) => c._id === convId);
-          const autre = autreParticipant(conv);
-          // chercher avatar dans tous les champs possibles
-          const avatarSrc = autre?.avatar || autre?.photoCouverture || null;
+          await chargerInfosSalons([conv]);
+          const ident = identiteConv(conv);
           afficherChat({
-            nom: autre?.nom,
-            avatar: avatarSrc,
-            salonId: conv?.salon,
+            nom: ident.nom,
+            avatar: ident.avatar,
+            salonId: ident.salonId || conv?.salon,
             msgs,
             convId,
           });
