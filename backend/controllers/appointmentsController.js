@@ -3,7 +3,32 @@ const Appointment = require("../models/Appointment");
 const Salon = require("../models/Salons");
 const Service = require("../models/Service");
 const { ok, fail, created, paginated } = require("../utils/apiResponse");
-const { push } = require("../services/notificationsService");
+
+/* FIX « push is not a function » :
+   avant, on faisait  const { push } = require("../services/notificationsService");
+   Si le service n'exporte pas `push` sous ce nom (ou à cause d'un import circulaire),
+   `push` valait undefined et l'appel plantait APRÈS la création du rendez-vous → 500.
+   Maintenant on lit la fonction au moment de l'appel, et une notification qui
+   échoue ne casse plus jamais la réservation (l'erreur est seulement loguée). */
+const notificationsService = require("../services/notificationsService");
+
+function notifier(...args) {
+  try {
+    if (typeof notificationsService.push !== "function") {
+      console.error(
+        "notificationsService.push introuvable. Exports disponibles :",
+        Object.keys(notificationsService || {}),
+      );
+      return;
+    }
+    const r = notificationsService.push(...args);
+    if (r && typeof r.catch === "function") {
+      r.catch((e) => console.error("Notification :", e.message));
+    }
+  } catch (e) {
+    console.error("Notification :", e.message);
+  }
+}
 
 /* GET /api/rendez-vous
    Client : ses propres rdv.  Salon : rdv de son salon.
@@ -51,28 +76,42 @@ exports.creer = async (req, res, next) => {
     if (!salonId || !date || !heure)
       return fail(res, "Salon, date et heure obligatoires.");
 
+    const dateRdv = new Date(date);
+    if (isNaN(dateRdv.getTime())) return fail(res, "Date invalide.");
+
     const salon = await Salon.findById(salonId).select(
       "_id nom proprietaire isActif",
     );
     if (!salon || !salon.isActif) return fail(res, "Salon introuvable.", 404);
 
+    /* FIX : évite les doublons (double clic, ou nouvel essai après une erreur) */
+    const doublon = await Appointment.findOne({
+      client: req.user._id,
+      salon: salon._id,
+      date: dateRdv,
+      heure,
+      statut: { $in: ["pending", "confirmed"] },
+    });
+    if (doublon)
+      return fail(res, "Vous avez déjà une demande pour ce créneau.", 409);
+
     const rdv = await Appointment.create({
       client: req.user._id,
       salon: salon._id,
       service: serviceId || null,
-      date: new Date(date),
+      date: dateRdv,
       heure,
       message: message?.trim() || null,
     });
 
-    /* Notifier le propriétaire du salon */
+    /* Notifier le propriétaire du salon (sans jamais faire échouer la réservation) */
     const io = req.app.get("io");
-    push(
+    notifier(
       io,
       salon.proprietaire,
       "reservation",
       "Nouvelle demande de réservation",
-      `${req.user.nom} souhaite un rendez-vous le ${new Date(date).toLocaleDateString("fr-FR")}.`,
+      `${req.user.nom} souhaite un rendez-vous le ${dateRdv.toLocaleDateString("fr-FR")}.`,
       `/pages/dashboard-salon.html#rendez-vous`,
     );
 
@@ -102,7 +141,7 @@ exports.modifierStatut = async (req, res, next) => {
       if (!["pending", "confirmed"].includes(rdv.statut))
         return fail(res, "Ce rendez-vous ne peut pas être annulé.");
       rdv.statut = "cancelled";
-      push(
+      notifier(
         io,
         rdv.salon.proprietaire,
         "reservation",
@@ -123,7 +162,7 @@ exports.modifierStatut = async (req, res, next) => {
         rejected: "Votre rendez-vous a été refusé.",
         completed: "Rendez-vous terminé.",
       };
-      push(
+      notifier(
         io,
         rdv.client,
         "reservation",
