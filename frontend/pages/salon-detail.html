@@ -590,8 +590,12 @@
         window.location.href = cible;
       }
 
+      /* FIX 404 : la page de réservation s'appelle reservations.html (avec un « s »).
+         Si le fichier est renommé un jour, c'est le SEUL endroit à modifier. */
+      const PAGE_RESERVATION = "reservations.html";
+
       function reserver(id) {
-        allerApresConnexion(`reservation.html?id=${encodeURIComponent(id)}`);
+        allerApresConnexion(`${PAGE_RESERVATION}?id=${encodeURIComponent(id)}`);
       }
 
       function contacter(proprietaireId, sId) {
