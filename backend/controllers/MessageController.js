@@ -3,10 +3,15 @@ const Conversation = require("../models/conversation");
 const Message = require("../models/Message");
 
 /* ── Helpers ─────────────────────────────────────────────────── */
+// FIX : le salon est maintenant renvoyé avec sa photo de couverture et son
+// propriétaire (avant : seulement "nom logo"), ce qui permet au frontend
+// d'afficher la photo du salon et de savoir à qui il parle.
+const SALON_FIELDS = "nom logo photoCouverture proprietaire";
+
 const populateConv = (query) =>
   query
     .populate("participants", "nom avatar role")
-    .populate("salon", "nom logo")
+    .populate("salon", SALON_FIELDS)
     .populate("dernierMessage", "contenu createdAt expediteur");
 
 /* ================================================================
@@ -72,10 +77,14 @@ exports.ouvrir = async (req, res, next) => {
         participants,
         salon: salonId || null,
       });
+    } else if (!conv.salon && salonId) {
+      // FIX : conversation déjà existante mais créée sans salon → on la rattache
+      conv.salon = salonId;
+      await conv.save();
     }
 
     await conv.populate("participants", "nom avatar role");
-    await conv.populate("salon", "nom logo");
+    await conv.populate("salon", SALON_FIELDS);
 
     res.status(201).json({ success: true, data: conv });
   } catch (err) {

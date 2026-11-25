@@ -289,7 +289,8 @@
         const info = {
           id: sid,
           nom: s.nom,
-          avatar: s.photoCouverture || s.logo || null,
+          avatar:
+            s.photoCouverture || s.logo || cacheSalons[sid]?.avatar || null,
           proprio:
             idDe(champ) ||
             proprioParDefaut ||
@@ -335,7 +336,34 @@
         return ids.some((id) => cacheSalons[id]);
       }
 
+      /* Identité (nom + photo du salon) retenue au moment où la conversation est
+         créée depuis un salon. Stockée par utilisateur : ne dépend ni du backend
+         ni du champ « propriétaire », et survit au rechargement de la page. */
+      const cleIdent = () => "sf_v2_conv_ident_" + (moi()._id || "");
+      function lireIdentLocale() {
+        try {
+          return JSON.parse(localStorage.getItem(cleIdent()) || "{}");
+        } catch (e) {
+          return {};
+        }
+      }
+      function memoriserIdentLocale(convId, ident) {
+        try {
+          const m = lireIdentLocale();
+          m[convId] = ident;
+          localStorage.setItem(cleIdent(), JSON.stringify(m));
+        } catch (e) {}
+      }
+
       function identiteConv(c) {
+        const loc = c?._id ? lireIdentLocale()[c._id] : null;
+        if (loc) {
+          return {
+            nom: loc.nom || "Utilisateur",
+            avatar: loc.avatar || null,
+            salonId: loc.salonId || idDe(c?.salon) || null,
+          };
+        }
         const autre = autreParticipant(c);
         const autreId = idDe(autre);
         const info = infoSalonDe(c) || salonParProprio[autreId] || null;
@@ -734,6 +762,13 @@
           const id = conv?._id;
           if (!id) throw new Error("Le serveur n'a pas créé la conversation.");
           await Messages.envoyer(id, { contenu });
+          // on retient nom + photo du salon pour cette conversation
+          if (brouillon.salon)
+            memoriserIdentLocale(id, {
+              nom: brouillon.nom,
+              avatar: brouillon.avatar,
+              salonId: brouillon.salonId,
+            });
           brouillon = null;
           history.replaceState(
             null,
