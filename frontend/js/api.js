@@ -18,7 +18,9 @@ async function apiFetch(path, options = {}) {
     ...options.headers,
   };
   const res = await fetch(API_URL + path, { ...options, headers });
-  const json = await res.json();
+  // FIX : si le serveur renvoie autre chose que du JSON (page 404/502 de Render,
+  // serveur qui se réveille...), on évite l'erreur cryptique « Unexpected token < ».
+  const json = await res.json().catch(() => ({}));
   if (!res.ok) {
     if (res.status === 429) {
       throw new Error(
@@ -72,6 +74,9 @@ const Services = {
 /* ── Messages ────────────────────────────────────────────────── */
 const Messages = {
   conversations: () => apiFetch("/messages/conversations"),
+  // FIX : la création passe par POST /messages/ouvrir (route réelle du backend)
+  ouvrir: (d) =>
+    apiFetch("/messages/ouvrir", { method: "POST", body: JSON.stringify(d) }),
   getMessages: (id) => apiFetch(`/messages/${id}`),
   envoyer: (id, d) =>
     apiFetch(`/messages/${id}`, { method: "POST", body: JSON.stringify(d) }),

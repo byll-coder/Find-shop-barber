@@ -47,6 +47,82 @@
       body {
         overflow: hidden;
       }
+
+      /* ── FIX RESPONSIVE ─────────────────────────────────────────
+         Sur mobile : on affiche SOIT la liste des conversations,
+         SOIT le chat (classe .chat-open sur .msg-layout), avec un
+         bouton retour. Placé ici pour passer APRÈS message.css.
+         (les !important servent à écraser message.css que je n'ai
+         pas vu — à nettoyer une fois message.css revu)
+      ──────────────────────────────────────────────────────────── */
+      .btn-back {
+        display: none;
+        background: none;
+        border: none;
+        color: inherit;
+        font-size: 1.4rem;
+        padding: 4px 8px 4px 0;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+
+      @media (max-width: 768px) {
+        .msg-layout {
+          display: flex !important;
+          flex-direction: row !important;
+          box-sizing: border-box;
+          overflow: hidden;
+          /* la hauteur exacte est calculée en JS (ajusterHauteur) */
+        }
+        .msg-layout .conv-sidebar {
+          display: flex;
+          flex-direction: column;
+          width: 100% !important;
+          max-width: none !important;
+          min-height: 0;
+          flex: 1 1 auto;
+        }
+        .msg-layout .conv-list {
+          flex: 1 1 auto;
+          min-height: 0;
+          overflow-y: auto;
+        }
+        .msg-layout .chat-zone {
+          display: none !important;
+          width: 100%;
+        }
+
+        /* Conversation ouverte : on cache la liste, on montre le chat */
+        .msg-layout.chat-open .conv-sidebar {
+          display: none !important;
+        }
+        .msg-layout.chat-open .chat-zone {
+          display: flex !important;
+          flex-direction: column;
+          flex: 1 1 auto;
+          min-width: 0;
+          min-height: 0;
+        }
+
+        /* Le champ d'envoi doit toujours rester visible en bas */
+        .chat-zone .chat-header {
+          flex: 0 0 auto;
+        }
+        .chat-zone .chat-messages {
+          flex: 1 1 auto;
+          min-height: 0;
+          overflow-y: auto;
+        }
+        .chat-zone .chat-input-zone {
+          flex: 0 0 auto;
+          padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+        }
+
+        .btn-back {
+          display: inline-flex;
+          align-items: center;
+        }
+      }
     </style>
   </head>
   <body>
@@ -140,7 +216,7 @@
     <script>
       let toutesConvs = [];
       let convActuelle = null;
-      // FIX : brouillon enrichi avec nom + avatar + salonId pour l'affichage correct
+      // brouillon enrichi avec nom + avatar + salonId pour l'affichage correct
       let brouillon = null; // { to, salon, nom, avatar, salonId }
       let enAttente = [];
 
@@ -194,6 +270,29 @@
         c?.participants?.find((p) => idDe(p) !== moi()._id) ||
         c?.participants?.[0];
 
+      /* ── FIX RESPONSIVE : hauteur exacte du layout sur mobile ──
+         100vh inclut la barre d'adresse du navigateur mobile, ce qui
+         coupe le bas de la page (donc le champ d'envoi). On calcule
+         la hauteur réellement visible à partir de la position du layout. */
+      function ajusterHauteur() {
+        const layout = document.querySelector(".msg-layout");
+        if (!layout) return;
+        if (window.matchMedia("(max-width: 768px)").matches) {
+          const top = layout.getBoundingClientRect().top;
+          layout.style.height = Math.max(200, window.innerHeight - top) + "px";
+        } else {
+          layout.style.height = "";
+        }
+      }
+      window.addEventListener("resize", ajusterHauteur);
+      window.addEventListener("orientationchange", ajusterHauteur);
+      window.addEventListener("load", ajusterHauteur);
+
+      /* ── FIX RESPONSIVE : retour à la liste des conversations (mobile) ── */
+      function retourListe() {
+        document.querySelector(".msg-layout")?.classList.remove("chat-open");
+      }
+
       /* ── Liste des conversations ── */
       function renderConvs(convs) {
         const el = document.getElementById("conv-list");
@@ -213,7 +312,7 @@
             const lastMsg =
               c.dernierMessage?.contenu || "Démarrer la conversation…";
             const init = (autre?.nom || "?")[0].toUpperCase();
-            // FIX : avatar dans la liste — utilise photoCouverture ou avatar selon le champ dispo
+            // avatar dans la liste — utilise avatar ou photoCouverture selon le champ dispo
             const avatarSrc = autre?.avatar || autre?.photoCouverture || null;
             return `<div class="conv-item ${c._id === convActuelle ? "active" : ""}" data-id="${c._id}" onclick="ouvrirConv('${c._id}')">
             <div class="conv-av">${avatarSrc ? `<img src="${esc(avatarSrc)}" alt="">` : init}</div>
@@ -273,7 +372,7 @@
         );
       }
 
-      /* ── FIX BUG 1 : demarrerConversation récupère maintenant les vraies infos ── */
+      /* ── demarrerConversation récupère les vraies infos du salon ── */
       async function demarrerConversation(to, salon) {
         const existante = trouverConv(to, salon);
         if (existante) return ouvrirConv(existante._id);
@@ -340,8 +439,12 @@
           ?.setAttribute("placeholder", "Écrivez votre premier message…");
       }
 
+      /* ── FIX BUG 400 : la route de création est POST /messages/ouvrir
+         (et non /messages/conversations, qui n'existe pas côté backend :
+         la requête tombait dans POST /:convId avec convId="conversations",
+         sans "contenu" → « Le message ne peut pas être vide ») ── */
       async function creerConversation(to, salon) {
-        return apiFetch("/messages/conversations", {
+        return apiFetch("/messages/ouvrir", {
           method: "POST",
           body: JSON.stringify({
             destinataire: to,
@@ -355,7 +458,7 @@
 
       /* ── Messages ── */
       function renderMsg(msg, isMine) {
-        // FIX : utiliser avatar ou photoCouverture selon ce qui est disponible
+        // utiliser avatar ou photoCouverture selon ce qui est disponible
         const avatarSrc =
           msg.expediteur?.avatar || msg.expediteur?.photoCouverture || null;
         const init = (msg.expediteur?.nom || "?")[0].toUpperCase();
@@ -376,13 +479,15 @@
 
       function afficherChat({ nom, avatar, salonId, msgs, convId }) {
         const initA = (nom || "?")[0].toUpperCase();
-        // FIX : afficher l'avatar (image) si disponible, sinon initiale
+        // afficher l'avatar (image) si disponible, sinon initiale
         const avatarHtml = avatar
           ? `<img src="${esc(avatar)}" alt="${esc(nom)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
           : initA;
 
         document.getElementById("chat-zone").innerHTML = `
           <div class="chat-header">
+            <button class="btn-back" onclick="retourListe()" aria-label="Retour aux conversations">
+              <i class="ti ti-arrow-left"></i></button>
             <div class="conv-av" style="flex-shrink:0;">${avatarHtml}</div>
             <div style="flex:1;">
               <p class="chat-header-name">${esc(nom || "Utilisateur")}</p>
@@ -426,8 +531,16 @@
                 <i class="ti ti-send"></i></button>
             </div>
           </div>`;
+
+        // FIX RESPONSIVE : sur mobile, on bascule de la liste vers le chat
+        document.querySelector(".msg-layout")?.classList.add("chat-open");
+        ajusterHauteur();
+
         scrollBas();
-        document.getElementById("msg-input")?.focus();
+        // sur mobile, éviter d'ouvrir le clavier automatiquement à l'arrivée sur le chat
+        if (!window.matchMedia("(max-width: 768px)").matches) {
+          document.getElementById("msg-input")?.focus();
+        }
       }
 
       /* ── Ouvrir une conversation existante ── */
@@ -450,7 +563,7 @@
           const msgs = enListe(await Messages.getMessages(convId), "messages");
           const conv = toutesConvs.find((c) => c._id === convId);
           const autre = autreParticipant(conv);
-          // FIX : chercher avatar dans tous les champs possibles
+          // chercher avatar dans tous les champs possibles
           const avatarSrc = autre?.avatar || autre?.photoCouverture || null;
           afficherChat({
             nom: autre?.nom,
@@ -580,6 +693,7 @@
       document.addEventListener("DOMContentLoaded", () => {
         if (!protegerPage()) return;
         majNavbar();
+        ajusterHauteur();
         try {
           Socket.connect();
           initSocketEvents();
