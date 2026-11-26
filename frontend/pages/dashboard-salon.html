@@ -402,6 +402,25 @@
                   <option value="enfant">Enfant</option>
                 </select>
               </div>
+              <!-- FIX : choix de la formule (Standard / Premium) -->
+              <div class="form-group">
+                <label class="form-label">Formule</label>
+                <select id="i-premium" class="form-input">
+                  <option value="false">Standard</option>
+                  <option value="true">Premium ★</option>
+                </select>
+                <p
+                  style="
+                    font-size: 0.74rem;
+                    color: var(--txt3);
+                    margin-top: 6px;
+                    line-height: 1.5;
+                  "
+                >
+                  Les salons Premium affichent un badge et passent en priorité
+                  dans la liste.
+                </p>
+              </div>
               <div class="form-group">
                 <label class="form-label">Commune *</label
                 ><input
@@ -786,13 +805,11 @@
           ?.classList.add("active");
         if (nom === "rdv") chargerRDV();
         if (nom === "avis") chargerAvis();
-        document
-          .querySelector(".dash-nav-btn.active")
-          ?.scrollIntoView({
-            inline: "center",
-            block: "nearest",
-            behavior: "smooth",
-          });
+        document.querySelector(".dash-nav-btn.active")?.scrollIntoView({
+          inline: "center",
+          block: "nearest",
+          behavior: "smooth",
+        });
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
 
@@ -897,6 +914,8 @@
         set("i-slogan", s.slogan);
         set("i-desc", s.description);
         set("i-cat", s.categorie || "mixte");
+        // FIX : formule actuelle du salon (Standard / Premium)
+        set("i-premium", s.isPremium ? "true" : "false");
         set("i-commune", s.commune);
         set("i-quartier", s.quartier);
         set("i-adresse", s.adresse);
@@ -918,6 +937,8 @@
           slogan: v("i-slogan"),
           description: v("i-desc"),
           categorie: $("i-cat").value,
+          // FIX : formule choisie (booléen) envoyée au serveur
+          isPremium: $("i-premium").value === "true",
           commune: v("i-commune"),
           quartier: v("i-quartier"),
           adresse: v("i-adresse"),

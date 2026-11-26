@@ -7,6 +7,14 @@ const Favorite = require("../models/Favorite");
 const { ok, fail, created, paginated } = require("../utils/apiResponse");
 const { calcMoyenne } = require("../utils/helpers");
 
+/* ── Formule Premium ─────────────────────────────────────────────
+   Le salon peut-il se déclarer « Premium » lui-même (formulaire « Mon salon ») ?
+   true  : choix libre (pas de système de paiement dans le projet pour l'instant).
+   false : seul un admin peut activer le premium → à utiliser le jour où le
+           paiement existe. Il suffit alors de passer cette constante à false. */
+const PREMIUM_LIBRE = true;
+const enBool = (v) => v === true || v === "true";
+
 /* ── Helpers internes ────────────────────────────────────────── */
 const parseLimit = (v, def = 12) =>
   Math.min(Math.max(parseInt(v, 10) || def, 1), 50);
@@ -189,6 +197,7 @@ exports.creer = async (req, res, next) => {
       quartier,
       photoCouverture,
       logo,
+      isPremium,
     } = req.body;
 
     if (!nom || !commune)
@@ -210,6 +219,9 @@ exports.creer = async (req, res, next) => {
       quartier: quartier?.trim() || null,
       photoCouverture: photoCouverture?.trim() || null,
       logo: logo?.trim() || null,
+
+      // FIX : formule choisie dans le formulaire (Standard / Premium)
+      isPremium: PREMIUM_LIBRE ? enBool(isPremium) : false,
 
       // Activation et publication automatiques pour affichage immédiat
       isPublie: true,
@@ -261,12 +273,19 @@ exports.modifier = async (req, res, next) => {
 
     if (req.user.role === "admin") {
       CHAMPS_AUTORISES.push("isPremium", "isVerifie", "isPublie", "isActif");
+    } else if (PREMIUM_LIBRE) {
+      // FIX : le propriétaire peut changer sa formule (Standard / Premium)
+      CHAMPS_AUTORISES.push("isPremium");
     }
 
     const mises = {};
     CHAMPS_AUTORISES.forEach((c) => {
       if (req.body[c] !== undefined) mises[c] = req.body[c];
     });
+
+    // Le formulaire envoie "true"/"false" : on s'assure d'enregistrer un vrai booléen
+    if (mises.isPremium !== undefined)
+      mises.isPremium = enBool(mises.isPremium);
 
     if (Object.keys(mises).length === 0)
       return fail(res, "Aucun champ à modifier.");
